@@ -26,7 +26,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\xcl.exe",
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with XCL"
   },
   {
@@ -53,11 +53,8 @@
     ],
     "buildCommands": [
       "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
-      "cargo xtask install-hooks",               
-      "copy victory.example.toml victory.toml",   
-      "cargo test --workspace",                   
-      "cargo run -p victory -- config", 
-      "cargo build --release -p victory"
+      "copy victory.example.toml victory.toml",
+      "cargo +stable-x86_64-pc-windows-msvc build --release -p victory"
     ],
     "exe": "target\\release\\victory.exe",
     "preLaunchArgs": [
@@ -101,9 +98,9 @@
     "notes": "Launch Game with Dexnom - VIctory Based"
   },
   {
-    "id": "Zettrox",
-    "name": "Zettrox - VIctory Based",
-    "gitUrl": "https://github.com/Zettrox/ztrx.git",
+    "id": "VItoriaBR",
+    "name": "VItoriaBR - VIctory Based",
+    "gitUrl": "https://github.com/uiliannn/VItoriaBr.git",
     "dependencies": [
       {
         "name": "Git",
@@ -131,7 +128,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Zettrox - VIctory Based"
+    "notes": "Launch Game with VItoriaBr - VIctory Based"
   },
   {
   "id": "VIctory-origin",
