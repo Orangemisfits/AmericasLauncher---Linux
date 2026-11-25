@@ -1,7 +1,7 @@
 <Window x:Class="AmericasLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Americas Launcher - V1.1.0"
+        Title="Americas Launcher - V1.2.0"
         Icon="/assets/americas-logo.ico"
         Width="1280"
         Height="720"
@@ -312,7 +312,7 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                     <Image Source="/assets/logo.png" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
-                    <TextBlock Text="Americas Launcher - V1.1.0"
+                    <TextBlock Text="Americas Launcher - V1.2.0"
                                FontSize="12.5"
                                FontWeight="SemiBold"
                                Foreground="#E2E8F0"
@@ -389,10 +389,13 @@
                                    FontWeight="Bold"
                                    Foreground="#F8FAFC"
                                    HorizontalAlignment="Center"/>
-                        <TextBlock Text="GTA VI • Runner Hub"
-                                   FontSize="11.5"
-                                   Foreground="#94A3B8"
-                                   HorizontalAlignment="Center"/>
+                        <TextBlock FontSize="11.5" HorizontalAlignment="Center">
+                            <Hyperlink NavigateUri="https://github.com/isaac-btw/AmericasLauncher"
+                                       Foreground="#60A5FA"
+                                       RequestNavigate="Hyperlink_RequestNavigate">
+                                <Run Text="Github Page"/>
+                            </Hyperlink>
+                        </TextBlock>
                     </StackPanel>
 
                     <Border Grid.Row="1" Height="1" Background="#252E42" VerticalAlignment="Center"/>
@@ -432,7 +435,7 @@
                     <!-- Simple Launcher Version -->
                     <TextBlock Grid.Row="4"
                                x:Name="SidebarVersionText"
-                               Text="v1.1.0"
+                               Text="v1.2.0"
                                FontSize="12"
                                Foreground="#64748B"
                                HorizontalAlignment="Center"/>
@@ -922,7 +925,7 @@
                                            VerticalAlignment="Center"
                                            FontSize="13"
                                            Foreground="#CBD5E1"
-                                           Text="Current version: v1.1.0"
+                                           Text="Current version: v1.2.0"
                                            TextWrapping="Wrap"/>
                                 <Button x:Name="OpenReleaseButton"
                                         Grid.Column="2"
