@@ -439,7 +439,7 @@
                 <!-- VIEW 1: LAUNCH -->
                 <Grid x:Name="LaunchView" Visibility="Visible">
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="116"/>
+                        <RowDefinition Height="300"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
