@@ -17,6 +17,11 @@ public sealed class LaunchService
         var workDir = Path.GetDirectoryName(exe)!;
 
         // 1) Ön hazırlık komutları varsa (ör. translate) sırayla çalıştır ve bitmesini bekle
+        if (p.PreLaunchArgs.Count > 0)
+        {
+            log("NOTE: Pipeline/shader translation is starting. This may take a long time (several minutes on the first run) — please wait...");
+        }
+
         foreach (var rawArgs in p.PreLaunchArgs)
         {
             var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
@@ -26,16 +31,43 @@ public sealed class LaunchService
                 throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
         }
 
-        // 2) Ön hazırlık bittikten sonra asıl oyunu başlat
+        // 2) Ön hazırlık bittikten sonra asıl oyunu başlat ve çıktıyı doğrudan launcher ekranına yönlendir
         var args = FormatArgs(p.LaunchArgs, gameFolder, gameExe);
+        log($"> {args}");
         var psi = new ProcessStartInfo
         {
             FileName = exe,
             Arguments = args,
             WorkingDirectory = workDir,
-            UseShellExecute = false
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
         };
-        return Process.Start(psi) ?? throw new InvalidOperationException("Failed to start the process.");
+
+        var process = new Process
+        {
+            StartInfo = psi,
+            EnableRaisingEvents = true
+        };
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
+        process.Exited += (_, _) =>
+        {
+            try { log($"Process exited with code {process.ExitCode}."); }
+            catch { /* ignore if window already closed */ }
+            finally { process.Dispose(); }
+        };
+
+        if (!process.Start())
+        {
+            process.Dispose();
+            throw new InvalidOperationException("Failed to start the process.");
+        }
+
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+        return process;
     }
 
     private static string FormatArgs(string template, string gameFolder, string gameExe) =>
