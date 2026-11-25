@@ -29,8 +29,10 @@
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with XCL"
   }
+]
+[  
   {
-  "id": "VIctory-Belobug",
+    "id": "VIctory-Belobug",
     "name": "VIctory(Belobug)",
     "gitUrl": "https://github.com/Belobug/VIctory-Belobug-AMD.git",
     "dependencies": [
@@ -59,8 +61,10 @@
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with VIctory(Belobug)"
   }
+]
+[  
   {
-  "id": "Zettrox",
+    "id": "Zettrox",
     "name": "Zettrox",
     "gitUrl": "https://github.com/Zettrox/ztrx.git",
     "dependencies": [
@@ -89,7 +93,9 @@
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Vettrox"
   }
-   {
+]
+[
+  {
   "id": "hyphennn",
     "name": "Hyphennn(VIctory-Fork)",
     "gitUrl": "https://github.com/fxceless/victory-fork.git",
@@ -119,6 +125,8 @@
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Hyphennn"
   }
+]
+[  
   {
   "id": "Zettrox",
     "name": "Zettrox",
@@ -149,7 +157,9 @@
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Vettrox"
   }
-   {
+]
+[  
+  {
   "id": "VIctory-origin",
     "name": "VIctory(Original)",
     "gitUrl": "https://github.com/Marvisak/VIctory.git",
