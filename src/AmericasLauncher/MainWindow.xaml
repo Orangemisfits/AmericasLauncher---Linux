@@ -1,61 +1,544 @@
 <Window x:Class="AmericasLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Americas Launcher" Height="540" Width="780" WindowStartupLocation="CenterScreen">
-    <Grid Margin="16">
+        Title="AmericasLauncher"
+        Width="1280"
+        Height="720"
+        MinWidth="1024"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        Background="#191E29"
+        Foreground="#F8FAFC"
+        FontFamily="Segoe UI">
+
+    <Window.Resources>
+        <!-- Sidebar Navigation Style -->
+        <Style x:Key="NavRadioStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Root"
+                                Background="Transparent"
+                                CornerRadius="10"
+                                BorderThickness="1"
+                                BorderBrush="Transparent"
+                                Padding="14,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="4"/>
+                                    <ColumnDefinition Width="12"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border x:Name="Indicator"
+                                        Grid.Column="0"
+                                        Height="22"
+                                        CornerRadius="2"
+                                        Background="Transparent"
+                                        VerticalAlignment="Center"/>
+                                <ContentPresenter Grid.Column="2"
+                                                  VerticalAlignment="Center"
+                                                  HorizontalAlignment="Left"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#212838"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#252E42"/>
+                                <Setter TargetName="Root" Property="BorderBrush" Value="#3B5998"/>
+                                <Setter TargetName="Indicator" Property="Background" Value="#DC2626"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary Patriot Blue Button -->
+        <Style x:Key="PatriotBlueButton" TargetType="Button">
+            <Setter Property="Background" Value="#1E40AF"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#2563EB"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1D4ED8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Patriot Crimson Launch Button -->
+        <Style x:Key="PatriotRedButton" TargetType="Button" BasedOn="{StaticResource PatriotBlueButton}">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="BorderBrush" Value="#EF4444"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#DC2626"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Secondary Slate Button -->
+        <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PatriotBlueButton}">
+            <Setter Property="Background" Value="#232B3B"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+            <Setter Property="Foreground" Value="#F1F5F9"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#2D374D"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Modern Dark TextBox -->
+        <Style x:Key="ModernTextBox" TargetType="TextBox">
+            <Setter Property="Background" Value="#141923"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#2F3B52"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="2"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Runner Card Item Container -->
+        <Style x:Key="RunnerCardStyle" TargetType="ListBoxItem">
+            <Setter Property="Margin" Value="5,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="CardBorder"
+                                Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1.5"
+                                CornerRadius="12"
+                                Padding="14,12">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="4"/>
+                                    <RowDefinition Height="*"/>
+                                </Grid.RowDefinitions>
+                                <Border x:Name="TopStripe"
+                                        Grid.Row="0"
+                                        CornerRadius="2"
+                                        Background="#334155"
+                                        Margin="0,0,0,0"/>
+                                <ContentPresenter Grid.Row="1" Margin="0,10,0,0"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="#273044"/>
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="#475B80"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="CardBorder" Property="Background" Value="#24304A"/>
+                                <Setter TargetName="CardBorder" Property="BorderBrush" Value="#3B82F6"/>
+                                <Setter TargetName="TopStripe" Property="Background">
+                                    <Setter.Value>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#DC2626" Offset="0.0"/>
+                                            <GradientStop Color="#F8FAFC" Offset="0.5"/>
+                                            <GradientStop Color="#2563EB" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
+            <!-- Subtle American Flag Top Accent Line -->
+            <RowDefinition Height="3"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,8">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="GameFolderBox" IsReadOnly="True" Padding="4"/>
-            <Button Grid.Column="1" Content="Select game folder" Width="200" Margin="8,0,0,0" Padding="12,4"
-                    Click="BrowseFolder_Click"/>
-        </Grid>
+        <Border Grid.Row="0">
+            <Border.Background>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop Color="#B91C1C" Offset="0.0"/>
+                    <GradientStop Color="#F8FAFC" Offset="0.5"/>
+                    <GradientStop Color="#1D4ED8" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Border.Background>
+        </Border>
 
-        <Grid Grid.Row="1" Margin="0,0,0,8">
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="240"/>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
-            </Grid.ColumnDefinitions>
-            <TextBox x:Name="GameExeBox" IsReadOnly="True" Padding="4"/>
-            <Button Grid.Column="1" Content="Select Game Exe (Game.exe)" Width="200" Margin="8,0,0,0" Padding="12,4"
-                    Click="BrowseExe_Click"/>
-        </Grid>
-
-        <ComboBox x:Name="RunnerBox" Grid.Row="2" Margin="0,0,0,10" Padding="4"/>
-
-        <Grid Grid.Row="3" Margin="0,0,0,10">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <StackPanel Orientation="Horizontal">
-                <Button x:Name="InstallButton" Content="Install / Update" Padding="14,6" Click="Install_Click"/>
-                <Button x:Name="LaunchButton" Content="▶ Launch game" Padding="14,6" Margin="8,0,0,0" Click="Launch_Click"/>
-            </StackPanel>
+            <!-- LEFT SIDEBAR -->
+            <Border Grid.Column="0"
+                    Background="#141822"
+                    BorderBrush="#252E42"
+                    BorderThickness="0,0,1,0"
+                    Padding="18,20">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="28"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
 
-            <TextBlock x:Name="VersionText" Grid.Column="1" Margin="16,0,8,0" VerticalAlignment="Center"
-                       Text="Emulator version: -" TextTrimming="CharacterEllipsis"/>
+                    <!-- Top-Left Logo -->
+                    <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+                        <Border Width="96"
+                                Height="96"
+                                CornerRadius="20"
+                                BorderBrush="#334155"
+                                BorderThickness="1.5"
+                                ClipToBounds="True"
+                                Background="#1C2333">
+                            <Image Source="/assets/logo.jpg" Stretch="UniformToFill"/>
+                        </Border>
+                        <TextBlock Text="AMERICAS LAUNCHER"
+                                   Margin="0,12,0,2"
+                                   FontSize="14"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock Text="GTA VI • Runner Hub"
+                                   FontSize="11.5"
+                                   Foreground="#94A3B8"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
 
-            <TextBlock x:Name="StatusText" Grid.Column="2" VerticalAlignment="Center" HorizontalAlignment="Right"
-                       FontWeight="SemiBold" Text=""/>
+                    <Border Grid.Row="1" Height="1" Background="#252E42" VerticalAlignment="Center"/>
+
+                    <!-- Navigation Items -->
+                    <StackPanel Grid.Row="2">
+                        <RadioButton x:Name="LaunchNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     IsChecked="True"
+                                     Checked="Nav_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🚀" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Launch" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+
+                        <!-- Port Status (non-clickable placeholder for future feature) -->
+                        <Border Background="Transparent"
+                                CornerRadius="10"
+                                Height="46"
+                                Margin="0,4"
+                                Padding="18,0"
+                                Opacity="0.45"
+                                IsEnabled="False">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="📡" Margin="0,0,10,0" Foreground="#94A3B8"/>
+                                    <TextBlock Text="Port Status" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8"/>
+                                </StackPanel>
+                                <Border Grid.Column="1"
+                                        Background="#263147"
+                                        CornerRadius="4"
+                                        Padding="6,2"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="SOON" FontSize="9.5" FontWeight="Bold" Foreground="#94A3B8"/>
+                                </Border>
+                            </Grid>
+                        </Border>
+
+                        <RadioButton x:Name="SettingsNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     Checked="Nav_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚙" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+                    </StackPanel>
+
+                    <!-- Footer Badge -->
+                    <Border Grid.Row="4"
+                            Background="#1B2130"
+                            BorderBrush="#283248"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="12,10">
+                        <StackPanel>
+                            <TextBlock Text="America's Edition" FontSize="12" FontWeight="SemiBold" Foreground="#E2E8F0"/>
+                            <TextBlock Text="5 Runners Configured" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </Border>
+
+            <!-- RIGHT CONTENT AREA -->
+            <Grid Grid.Column="1" Margin="24,20">
+
+                <!-- VIEW 1: LAUNCH -->
+                <Grid x:Name="LaunchView" Visibility="Visible">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="116"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Top 5 Runner Cards (Paint boxes 1-5) -->
+                    <ListBox x:Name="RunnerBox"
+                             Grid.Row="0"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                             ItemContainerStyle="{StaticResource RunnerCardStyle}"
+                             Margin="-5,0,-5,14">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="5"/>
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0"
+                                               Text="{Binding Name}"
+                                               FontSize="13.5"
+                                               FontWeight="Bold"
+                                               Foreground="#F8FAFC"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Grid.Row="1"
+                                               Text="{Binding Notes}"
+                                               FontSize="11"
+                                               Foreground="#94A3B8"
+                                               TextWrapping="Wrap"
+                                               Margin="0,6,0,0"
+                                               VerticalAlignment="Top"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <!-- Action Bar: Install/Update, Launch Game, Version, Status -->
+                    <Grid Grid.Row="1" Margin="0,0,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <Button x:Name="InstallButton"
+                                    Style="{StaticResource PatriotBlueButton}"
+                                    Content="Install / Update"
+                                    Click="Install_Click"/>
+                            <Button x:Name="LaunchButton"
+                                    Style="{StaticResource PatriotRedButton}"
+                                    Content="▶  Launch Game"
+                                    Margin="10,0,0,0"
+                                    Click="Launch_Click"/>
+                        </StackPanel>
+
+                        <TextBlock x:Name="VersionText"
+                                   Grid.Column="1"
+                                   Margin="18,0,12,0"
+                                   VerticalAlignment="Center"
+                                   FontSize="13"
+                                   Foreground="#CBD5E1"
+                                   Text="Emulator version: -"
+                                   TextTrimming="CharacterEllipsis"/>
+
+                        <Border Grid.Column="2"
+                                Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12,6"
+                                VerticalAlignment="Center">
+                            <TextBlock x:Name="StatusText"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
+                                       Text=""/>
+                        </Border>
+                    </Grid>
+
+                    <!-- Red Warning Banner when Game Folder / Exe is missing -->
+                    <Border x:Name="MissingPathsBanner"
+                            Grid.Row="2"
+                            Background="#450A0A"
+                            BorderBrush="#DC2626"
+                            BorderThickness="1"
+                            CornerRadius="8"
+                            Padding="14,10"
+                            Margin="0,0,0,12"
+                            Visibility="Collapsed">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⚠" FontSize="14" Foreground="#FCA5A5" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                            <TextBlock Text="Game Folder and Game Exe are not selected. Please select them in Settings."
+                                       FontSize="13"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FCA5A5"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Progress Bar (Paint green bar) -->
+                    <ProgressBar x:Name="Progress"
+                                 Grid.Row="3"
+                                 Height="10"
+                                 Margin="0,0,0,12"
+                                 Background="#141822"
+                                 Foreground="#2563EB"
+                                 BorderBrush="#252E42"
+                                 BorderThickness="1"/>
+
+                    <!-- Console / Log Box (Paint large black box) -->
+                    <Border Grid.Row="4"
+                            Background="#0F131C"
+                            BorderBrush="#273145"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="4">
+                        <TextBox x:Name="LogBox"
+                                 Background="Transparent"
+                                 Foreground="#E2E8F0"
+                                 BorderThickness="0"
+                                 IsReadOnly="True"
+                                 TextWrapping="Wrap"
+                                 VerticalScrollBarVisibility="Auto"
+                                 FontFamily="Consolas"
+                                 FontSize="12.5"
+                                 Padding="10"/>
+                    </Border>
+                </Grid>
+
+                <!-- VIEW 2: SETTINGS -->
+                <Grid x:Name="SettingsView" Visibility="Collapsed">
+                    <StackPanel MaxWidth="820" HorizontalAlignment="Left" Width="820">
+                        <TextBlock Text="Settings"
+                                   FontSize="22"
+                                   FontWeight="Bold"
+                                   Foreground="#F8FAFC"/>
+                        <TextBlock Text="Configure your game directory and executable path."
+                                   FontSize="13"
+                                   Foreground="#94A3B8"
+                                   Margin="0,4,0,20"/>
+
+                        <Border Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="20">
+                            <StackPanel>
+                                <!-- Game Folder: Button on LEFT, Path on RIGHT -->
+                                <TextBlock Text="Game Folder"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#CBD5E1"
+                                           Margin="0,0,0,8"/>
+                                <Grid Margin="0,0,0,18">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="210"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Style="{StaticResource PatriotBlueButton}"
+                                            Content="Select Game Folder"
+                                            Click="BrowseFolder_Click"/>
+                                    <TextBox x:Name="GameFolderBox"
+                                             Grid.Column="1"
+                                             Style="{StaticResource ModernTextBox}"
+                                             IsReadOnly="True"
+                                             Margin="12,0,0,0"/>
+                                </Grid>
+
+                                <!-- Game Exe: Button on LEFT, Path on RIGHT -->
+                                <TextBlock Text="Game Executable"
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#CBD5E1"
+                                           Margin="0,0,0,8"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="210"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Button Grid.Column="0"
+                                            Style="{StaticResource SecondaryButton}"
+                                            Content="Select Game Exe"
+                                            Click="BrowseExe_Click"/>
+                                    <TextBox x:Name="GameExeBox"
+                                             Grid.Column="1"
+                                             Style="{StaticResource ModernTextBox}"
+                                             IsReadOnly="True"
+                                             Margin="12,0,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+            </Grid>
         </Grid>
-
-        <ProgressBar x:Name="Progress" Grid.Row="4" Height="14" Margin="0,0,0,10"/>
-
-        <TextBox x:Name="LogBox" Grid.Row="5" IsReadOnly="True" TextWrapping="Wrap"
-                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas"/>
     </Grid>
 </Window>

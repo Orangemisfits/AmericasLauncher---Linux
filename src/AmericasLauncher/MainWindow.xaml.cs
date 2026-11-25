@@ -26,9 +26,18 @@ public partial class MainWindow : Window
         RunnerBox.SelectedItem = _profiles.FirstOrDefault(p => p.Id == _config.SelectedRunnerId) ?? _profiles.FirstOrDefault();
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
+        UpdateMissingPathsBanner();
 
         // Attached after the initial selection so it does not fire during setup.
-        RunnerBox.SelectionChanged += async (_, _) => await RefreshVersionAsync();
+        RunnerBox.SelectionChanged += async (_, _) =>
+        {
+            if (Selected is { } profile)
+            {
+                _config.SelectedRunnerId = profile.Id;
+                _configService.Save(_config);
+            }
+            await RefreshVersionAsync();
+        };
         Loaded += async (_, _) => await RefreshVersionAsync();
     }
 
@@ -49,6 +58,21 @@ public partial class MainWindow : Window
         StatusText.Foreground = color;
     }
 
+    private void UpdateMissingPathsBanner()
+    {
+        if (MissingPathsBanner == null) return;
+        var missing = string.IsNullOrWhiteSpace(_config.GameFolder) || string.IsNullOrWhiteSpace(_config.GameExe);
+        MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void Nav_Checked(object sender, RoutedEventArgs e)
+    {
+        if (LaunchView == null || SettingsView == null) return;
+        var showLaunch = LaunchNavButton.IsChecked == true;
+        LaunchView.Visibility = showLaunch ? Visibility.Visible : Visibility.Collapsed;
+        SettingsView.Visibility = showLaunch ? Visibility.Collapsed : Visibility.Visible;
+    }
+
     /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>
     private async Task RefreshVersionAsync()
     {
@@ -66,14 +90,14 @@ public partial class MainWindow : Window
             if (!_runners.IsInstalled(profile))
             {
                 VersionText.Text = "Emulator version: not installed";
-                SetStatus("Not installed", Brushes.Gray);
+                SetStatus("Not installed", Brushes.LightSlateGray);
                 return;
             }
 
             var version = await _runners.GetInstalledVersionAsync(profile);
             if (ticket != _refreshCounter) return;
             VersionText.Text = "Emulator version: " + (version == "" ? "unknown" : version);
-            SetStatus("Checking for updates...", Brushes.Gray);
+            SetStatus("Checking for updates...", Brushes.LightSlateGray);
 
             var status = await _runners.CheckForUpdateAsync(profile);
             if (ticket != _refreshCounter) return;
@@ -81,19 +105,19 @@ public partial class MainWindow : Window
             switch (status)
             {
                 case UpdateStatus.UpToDate:
-                    SetStatus("Up to date", Brushes.ForestGreen);
+                    SetStatus("Up to date", Brushes.LimeGreen);
                     break;
                 case UpdateStatus.UpdateAvailable:
-                    SetStatus("New update available", Brushes.DarkOrange);
+                    SetStatus("New update available", Brushes.Orange);
                     break;
                 default:
-                    SetStatus("Could not check for updates", Brushes.Gray);
+                    SetStatus("Could not check for updates", Brushes.LightSlateGray);
                     break;
             }
         }
         catch
         {
-            if (ticket == _refreshCounter) SetStatus("Could not check for updates", Brushes.Gray);
+            if (ticket == _refreshCounter) SetStatus("Could not check for updates", Brushes.LightSlateGray);
         }
     }
 
@@ -101,6 +125,7 @@ public partial class MainWindow : Window
     {
         InstallButton.IsEnabled = !busy;
         LaunchButton.IsEnabled = !busy;
+        RunnerBox.IsEnabled = !busy;
         Progress.IsIndeterminate = busy;
     }
 
@@ -111,6 +136,7 @@ public partial class MainWindow : Window
         {
             GameFolderBox.Text = _config.GameFolder = dlg.FolderName;
             _configService.Save(_config);
+            UpdateMissingPathsBanner();
         }
     }
 
@@ -133,6 +159,7 @@ public partial class MainWindow : Window
                 GameFolderBox.Text = _config.GameFolder = Path.GetDirectoryName(dlg.FileName) ?? "";
 
             _configService.Save(_config);
+            UpdateMissingPathsBanner();
         }
     }
 
@@ -168,13 +195,17 @@ public partial class MainWindow : Window
         }
     }
 
-        private async void Launch_Click(object sender, RoutedEventArgs e)
+    private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } profile) return;
 
         if (!_runners.IsInstalled(profile)) { Log("Click 'Install / Update' first."); return; }
-        if (string.IsNullOrWhiteSpace(_config.GameFolder)) { Log("Select the game folder first."); return; }
-        if (string.IsNullOrWhiteSpace(_config.GameExe)) { Log("Select the game exe first."); return; }
+        if (string.IsNullOrWhiteSpace(_config.GameFolder) || string.IsNullOrWhiteSpace(_config.GameExe))
+        {
+            UpdateMissingPathsBanner();
+            Log("Game Folder and Game Exe are not selected. Please select them in Settings.");
+            return;
+        }
 
         var folder = Path.GetFullPath(_config.GameFolder).TrimEnd('\\') + "\\";
         var exe = Path.GetFullPath(_config.GameExe);
