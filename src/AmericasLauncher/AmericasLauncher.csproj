@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>AmericasLauncher</AssemblyName>
     <RootNamespace>AmericasLauncher</RootNamespace>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <ApplicationIcon>assets\americas-logo.ico</ApplicationIcon>
   </PropertyGroup>
 

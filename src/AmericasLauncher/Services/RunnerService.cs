@@ -13,6 +13,44 @@ public sealed class RunnerService
 
     public static string SourceDir(RunnerProfile p) => Path.Combine(Paths.Root, "sources", p.Id);
     public static string ExePath(RunnerProfile p) => Path.Combine(SourceDir(p), p.Exe);
+    public static string PipelineCacheDir => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "victory",
+        "cache");
+
+    public static long GetDirectorySize(string path)
+    {
+        if (!Directory.Exists(path)) return 0;
+        long total = 0;
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+            {
+                try { total += new FileInfo(file).Length; } catch { /* ignore locked/inaccessible files */ }
+            }
+        }
+        catch { /* ignore */ }
+        return total;
+    }
+
+    public static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB", "TB"];
+        double size = bytes;
+        var idx = 0;
+        while (size >= 1024 && idx < units.Length - 1)
+        {
+            size /= 1024;
+            idx++;
+        }
+        return $"{size:0.##} {units[idx]}";
+    }
+
+    public static void DeleteDirectorySafe(string path)
+    {
+        if (Directory.Exists(path))
+            Directory.Delete(path, recursive: true);
+    }
 
     public bool IsInstalled(RunnerProfile p) => File.Exists(ExePath(p));
 

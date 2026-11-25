@@ -27,7 +27,7 @@ Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/America
 | **XCL** | Independent Xbox Series compatibility layer | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
 | **Belabug - VIctory Based** | VIctory fork tuned for AMD Radeon GPUs | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
 | **Dexnom - VIctory Based** | Community VIctory fork with D3D12 & shader fixes | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
-| **Zettrox - VIctory Based** | VIctory fork focused on NVIDIA GPUs & stability | [Zettrox/ztrx](https://github.com/Zettrox/ztrx) |
+| **VItoriaBR - VIctory Based** | VIctory fork focused on NVIDIA GPUs & stability | [uiliannn/VItoriaBr](https://github.com/uiliannn/VItoriaBr) |
 | **VIctory(Original)** | Original VIctory compatibility layer | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 
 ## Port Status

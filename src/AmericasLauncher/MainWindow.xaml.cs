@@ -117,6 +117,72 @@ public partial class MainWindow : Window
             _portLoadedOnce = true;
             await LoadPortStatusAsync();
         }
+
+        if (SettingsNavButton.IsChecked == true)
+        {
+            await RefreshStorageAsync();
+        }
+    }
+
+    private sealed record RunnerStorageItem(RunnerProfile Profile, string Name, string SizeText, bool CanDelete);
+
+    private async void RefreshStorage_Click(object sender, RoutedEventArgs e) => await RefreshStorageAsync();
+
+    private async Task RefreshStorageAsync()
+    {
+        var cacheDir = RunnerService.PipelineCacheDir;
+        PipelineCachePathText.Text = cacheDir;
+
+        var (cacheBytes, items) = await Task.Run(() =>
+        {
+            var cBytes = RunnerService.GetDirectorySize(cacheDir);
+            var list = _profiles.Select(p =>
+            {
+                var dir = RunnerService.SourceDir(p);
+                var bytes = RunnerService.GetDirectorySize(dir);
+                var exists = Directory.Exists(dir);
+                return new RunnerStorageItem(
+                    p,
+                    p.Name,
+                    exists ? RunnerService.FormatBytes(bytes) : "Not installed",
+                    exists);
+            }).ToList();
+            return (cBytes, list);
+        });
+
+        PipelineCacheSizeText.Text = Directory.Exists(cacheDir) ? RunnerService.FormatBytes(cacheBytes) : "0 B";
+        DeletePipelineCacheButton.IsEnabled = Directory.Exists(cacheDir);
+        RunnerStorageList.ItemsSource = items;
+    }
+
+    private async void DeletePipelineCache_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            await Task.Run(() => RunnerService.DeleteDirectorySafe(RunnerService.PipelineCacheDir));
+            await RefreshStorageAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Failed to delete pipeline cache: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async void DeleteRunner_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: RunnerProfile profile }) return;
+        try
+        {
+            await Task.Run(() => RunnerService.DeleteDirectorySafe(RunnerService.SourceDir(profile)));
+            _config.InstalledVersions.Remove(profile.Id);
+            _configService.Save(_config);
+            await RefreshStorageAsync();
+            await RefreshVersionAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to delete {profile.Name}: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
