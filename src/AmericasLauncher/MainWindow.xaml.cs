@@ -168,7 +168,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void Launch_Click(object sender, RoutedEventArgs e)
+        private async void Launch_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } profile) return;
 
@@ -184,14 +184,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        SetBusy(true);
         try
         {
-            _launcher.Launch(profile, _config.GameFolder, _config.GameExe);
+            await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log);
             Log("Started.");
         }
         catch (Exception ex)
         {
             Log("ERROR: " + ex.Message);
+        }
+        finally
+        {
+            SetBusy(false);
         }
     }
 }
