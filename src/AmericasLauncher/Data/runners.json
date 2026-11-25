@@ -61,7 +61,7 @@
     ],
     "exe": "target\\release\\victory.exe",
     "preLaunchArgs": [
-      "translate --cache --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
+      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with VIctory(Belobug)"
