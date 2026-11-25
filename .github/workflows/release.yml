@@ -1,0 +1,71 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows Release
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore src/AmericasLauncher/AmericasLauncher.csproj
+
+      - name: Publish (self-contained, single-file)
+        run: >
+          dotnet publish src/AmericasLauncher/AmericasLauncher.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=none
+          -o publish
+
+      - name: Zip output
+        run: Compress-Archive -Path publish\* -DestinationPath AmericasLauncher-${{ github.ref_name }}-win-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Americas Launcher ${{ github.ref_name }}
+          body: |
+            ## Americas Launcher ${{ github.ref_name }}
+
+            A modern Windows launcher for GTA VI Xbox-to-PC compatibility runners.
+
+            ### Installation
+            1. Download `AmericasLauncher-${{ github.ref_name }}-win-x64.zip` below
+            2. Extract the ZIP anywhere you like
+            3. Run `AmericasLauncher.exe`
+            4. Go to **Settings** and pick your Game Folder and Game Executable
+            5. Select a runner card and click **Install / Update**, then **Launch Game**
+
+            ### Included Runners
+            | Runner | Repository |
+            |---|---|
+            | XCL | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
+            | Belabug - VIctory Based | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
+            | Dexnom - VIctory Based | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
+            | Zettrox - VIctory Based | [Zettrox/ztrx](https://github.com/Zettrox/ztrx) |
+            | VIctory (Original) | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
+
+            ---
+            > **Disclaimer:** Americas Launcher has no affiliation with Rockstar Games, Take-Two Interactive, or Grand Theft Auto. Use only with game files you legally own.
+          files: AmericasLauncher-${{ github.ref_name }}-win-x64.zip
+          draft: false
+          prerelease: false
