@@ -14,11 +14,12 @@ public sealed record LauncherUpdateResult(
     string? LatestVersion,
     string? ReleaseUrl,
     string? DownloadUrl,
+    string? ReleaseNotes,
     string Message);
 
 public sealed class LauncherUpdateService
 {
-    public const string CurrentVersionString = "1.3.1";
+    public const string CurrentVersionString = "1.3.5";
     private const string LatestReleaseApi = "https://api.github.com/repos/isaac-btw/AmericasLauncher/releases/latest";
 
     private static readonly HttpClient Http = CreateClient();
@@ -42,6 +43,7 @@ public sealed class LauncherUpdateService
                 LatestVersion: null,
                 ReleaseUrl: null,
                 DownloadUrl: null,
+                ReleaseNotes: null,
                 Message: $"No releases published yet (current: v{CurrentVersionString}).");
         }
 
@@ -51,6 +53,7 @@ public sealed class LauncherUpdateService
 
         var tag = root.TryGetProperty("tag_name", out var tagEl) ? tagEl.GetString()?.Trim() ?? "" : "";
         var url = root.TryGetProperty("html_url", out var urlEl) ? urlEl.GetString() : null;
+        var notes = root.TryGetProperty("body", out var bodyEl) ? bodyEl.GetString() : null;
         string? downloadUrl = null;
         if (root.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
         {
@@ -79,6 +82,7 @@ public sealed class LauncherUpdateService
                     LatestVersion: tag,
                     ReleaseUrl: url,
                     DownloadUrl: downloadUrl,
+                    ReleaseNotes: notes,
                     Message: $"Update available: {tag} (current: v{CurrentVersionString}).");
             }
 
@@ -88,6 +92,7 @@ public sealed class LauncherUpdateService
                 LatestVersion: tag,
                 ReleaseUrl: url,
                 DownloadUrl: downloadUrl,
+                ReleaseNotes: notes,
                 Message: $"You are up to date (v{CurrentVersionString}).");
         }
 
@@ -97,6 +102,7 @@ public sealed class LauncherUpdateService
             LatestVersion: tag,
             ReleaseUrl: url,
             DownloadUrl: downloadUrl,
+            ReleaseNotes: notes,
             Message: $"Latest release: {tag} (current: v{CurrentVersionString}).");
     }
 

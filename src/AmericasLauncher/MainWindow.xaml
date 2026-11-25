@@ -1,7 +1,7 @@
 <Window x:Class="AmericasLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Americas Launcher - V1.3.1"
+        Title="Americas Launcher - V1.3.5"
         Icon="/assets/americas-logo.ico"
         Width="1280"
         Height="720"
@@ -435,7 +435,7 @@
                     <!-- Simple Launcher Version -->
                     <TextBlock Grid.Row="4"
                                x:Name="SidebarVersionText"
-                               Text="v1.3.1"
+                               Text="v1.3.5"
                                FontSize="12"
                                Foreground="#64748B"
                                HorizontalAlignment="Center"/>
@@ -1020,6 +1020,7 @@
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="210"/>
+                                    <ColumnDefinition Width="Auto"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
@@ -1028,16 +1029,24 @@
                                         Style="{StaticResource PatriotBlueButton}"
                                         Content="Check for Updates"
                                         Click="CheckLauncherUpdate_Click"/>
+                                <ToggleButton x:Name="AutoUpdateToggle"
+                                              Grid.Column="1"
+                                              Style="{StaticResource PipelineToggleStyle}"
+                                              Content="Auto Update: OFF"
+                                              IsChecked="False"
+                                              Checked="AutoUpdate_Changed"
+                                              Unchecked="AutoUpdate_Changed"
+                                              Margin="12,0,0,0"/>
                                 <TextBlock x:Name="LauncherUpdateStatusText"
-                                           Grid.Column="1"
+                                           Grid.Column="2"
                                            Margin="16,0,12,0"
                                            VerticalAlignment="Center"
                                            FontSize="13"
                                            Foreground="#CBD5E1"
-                                           Text="Current version: v1.3.1"
+                                           Text="Current version: v1.3.5"
                                            TextWrapping="Wrap"/>
                                 <Button x:Name="OpenReleaseButton"
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Style="{StaticResource PatriotRedButton}"
                                         Content="Update Now"
                                         Visibility="Collapsed"
@@ -1049,5 +1058,48 @@
 
             </Grid>
         </Grid>
+
+        <!-- Release Notes Toast -->
+        <Border x:Name="ReleaseNoteToast"
+                Background="#1E293B"
+                BorderBrush="#3B82F6"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="16,12"
+                Margin="0,0,16,16"
+                Visibility="Collapsed"
+                MaxWidth="400"
+                VerticalAlignment="Bottom"
+                HorizontalAlignment="Right"
+                Grid.Row="2"
+                Panel.ZIndex="99">
+            <StackPanel>
+                <Grid Margin="0,0,0,8">
+                    <TextBlock x:Name="ToastVersionText"
+                               FontSize="13"
+                               FontWeight="Bold"
+                               Foreground="#F8FAFC"/>
+                    <Button HorizontalAlignment="Right"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Foreground="#94A3B8"
+                            Content="✕"
+                            Click="ToastClose_Click"
+                            Cursor="Hand"/>
+                </Grid>
+                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="ToastNotesText"
+                               FontSize="12"
+                               Foreground="#CBD5E1"
+                               TextWrapping="Wrap"/>
+                </ScrollViewer>
+                <TextBlock x:Name="ToastCountdownText"
+                           FontSize="11"
+                           Foreground="#64748B"
+                           HorizontalAlignment="Right"
+                           Margin="0,8,0,0"
+                           Text="Closes in 5s"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

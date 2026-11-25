@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Navigation;
+using System.Windows.Threading;
 using AmericasLauncher.Models;
 using AmericasLauncher.Services;
 using Microsoft.Win32;
@@ -22,6 +23,10 @@ public partial class MainWindow : Window
     private bool _portLoadedOnce;
     private string? _latestReleaseUrl;
     private string? _latestDownloadUrl;
+    private string? _latestVersion;
+    private string? _latestReleaseNotes;
+    private DispatcherTimer? _toastTimer;
+    private int _toastCountdown;
 
     public MainWindow()
     {
@@ -34,8 +39,23 @@ public partial class MainWindow : Window
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
         PipelineToggleButton.IsChecked = _config.UsePipeline;
+        AutoUpdateToggle.IsChecked = _config.AutoUpdate;
+        AutoUpdateToggle.Content = _config.AutoUpdate ? "Auto Update: ON" : "Auto Update: OFF";
         UpdateMissingPathsBanner();
         UpdatePipelineState();
+
+        if (!string.IsNullOrWhiteSpace(_config.PendingUpdateNotes))
+        {
+            ShowReleaseNoteToast(_config.PendingUpdateVersion ?? "New Version", _config.PendingUpdateNotes);
+            _config.PendingUpdateNotes = null;
+            _config.PendingUpdateVersion = null;
+            _configService.Save(_config);
+        }
+
+        if (_config.AutoUpdate)
+        {
+            Loaded += async (_, _) => await AutoCheckUpdateAsync();
+        }
 
         // Attached after the initial selection so it does not fire during setup.
         RunnerBox.SelectionChanged += async (_, _) =>
@@ -240,6 +260,8 @@ public partial class MainWindow : Window
 
             _latestReleaseUrl = res.ReleaseUrl;
             _latestDownloadUrl = res.DownloadUrl;
+            _latestVersion = res.LatestVersion;
+            _latestReleaseNotes = res.ReleaseNotes;
             OpenReleaseButton.Content = !string.IsNullOrWhiteSpace(res.DownloadUrl) ? "Update Now" : "Open Release";
             OpenReleaseButton.Visibility = res.IsUpdateAvailable &&
                 (!string.IsNullOrWhiteSpace(res.DownloadUrl) || !string.IsNullOrWhiteSpace(res.ReleaseUrl))
@@ -265,6 +287,10 @@ public partial class MainWindow : Window
             OpenReleaseButton.IsEnabled = false;
             try
             {
+                _config.PendingUpdateNotes = _latestReleaseNotes;
+                _config.PendingUpdateVersion = _latestVersion;
+                _configService.Save(_config);
+
                 await _launcherUpdates.DownloadAndApplyUpdateAsync(
                     _latestDownloadUrl,
                     msg => Dispatcher.Invoke(() => LauncherUpdateStatusText.Text = msg));
@@ -283,6 +309,61 @@ public partial class MainWindow : Window
         if (!string.IsNullOrWhiteSpace(_latestReleaseUrl))
             Process.Start(new ProcessStartInfo(_latestReleaseUrl) { UseShellExecute = true });
     }
+
+    private async Task AutoCheckUpdateAsync()
+    {
+        try
+        {
+            var res = await _launcherUpdates.CheckForUpdateAsync();
+            if (res.IsUpdateAvailable && !string.IsNullOrWhiteSpace(res.DownloadUrl))
+            {
+                _config.PendingUpdateNotes = res.ReleaseNotes;
+                _config.PendingUpdateVersion = res.LatestVersion;
+                _configService.Save(_config);
+                await _launcherUpdates.DownloadAndApplyUpdateAsync(res.DownloadUrl, _ => { });
+                Application.Current.Shutdown();
+            }
+        }
+        catch
+        {
+            // Silent on startup auto-update check
+        }
+    }
+
+    private void AutoUpdate_Changed(object sender, RoutedEventArgs e)
+    {
+        var enabled = AutoUpdateToggle.IsChecked == true;
+        AutoUpdateToggle.Content = enabled ? "Auto Update: ON" : "Auto Update: OFF";
+        _config.AutoUpdate = enabled;
+        _configService.Save(_config);
+    }
+
+    private void ShowReleaseNoteToast(string version, string notes)
+    {
+        ToastVersionText.Text = $"Updated to {version}";
+        ToastNotesText.Text = notes;
+        ReleaseNoteToast.Visibility = Visibility.Visible;
+        _toastCountdown = 5;
+        ToastCountdownText.Text = "Closes in 5s";
+        _toastTimer?.Stop();
+        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _toastTimer.Tick += (_, _) =>
+        {
+            _toastCountdown--;
+            if (_toastCountdown <= 0) CloseToast();
+            else ToastCountdownText.Text = $"Closes in {_toastCountdown}s";
+        };
+        _toastTimer.Start();
+    }
+
+    private void CloseToast()
+    {
+        _toastTimer?.Stop();
+        _toastTimer = null;
+        ReleaseNoteToast.Visibility = Visibility.Collapsed;
+    }
+
+    private void ToastClose_Click(object sender, RoutedEventArgs e) => CloseToast();
 
     /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>
     private async Task RefreshVersionAsync()
