@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-only
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
+using System.Windows.Navigation;
 using AmericasLauncher.Models;
 using AmericasLauncher.Services;
 using Microsoft.Win32;
@@ -13,8 +15,12 @@ public partial class MainWindow : Window
     private readonly ConfigService _configService = new();
     private readonly RunnerService _runners = new();
     private readonly LaunchService _launcher = new();
+    private readonly LauncherUpdateService _launcherUpdates = new();
+    private readonly PortStatusService _portStatus = new();
     private readonly AppConfig _config;
     private readonly List<RunnerProfile> _profiles;
+    private bool _portLoadedOnce;
+    private string? _latestReleaseUrl;
 
     public MainWindow()
     {
@@ -41,7 +47,9 @@ public partial class MainWindow : Window
         Loaded += async (_, _) => await RefreshVersionAsync();
         StateChanged += (_, _) =>
         {
-            RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+            var isMax = WindowState == WindowState.Maximized;
+            RootGrid.Margin = isMax ? new Thickness(7) : new Thickness(0);
+            MaxRestoreIcon.Data = Geometry.Parse(isMax ? "M0,2 H7 V9 H0 Z M2,2 V0 H9 V7 H7" : "M0,0 H9 V9 H0 Z");
         };
     }
 
@@ -76,12 +84,93 @@ public partial class MainWindow : Window
         MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private void Nav_Checked(object sender, RoutedEventArgs e)
+    private async void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        if (LaunchView == null || SettingsView == null) return;
-        var showLaunch = LaunchNavButton.IsChecked == true;
-        LaunchView.Visibility = showLaunch ? Visibility.Visible : Visibility.Collapsed;
-        SettingsView.Visibility = showLaunch ? Visibility.Collapsed : Visibility.Visible;
+        if (LaunchView == null || PortStatusView == null || SettingsView == null) return;
+        LaunchView.Visibility = LaunchNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        PortStatusView.Visibility = PortStatusNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        SettingsView.Visibility = SettingsNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+        if (PortStatusNavButton.IsChecked == true && !_portLoadedOnce)
+        {
+            _portLoadedOnce = true;
+            await LoadPortStatusAsync();
+        }
+    }
+
+    private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
+    {
+        Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri) { UseShellExecute = true });
+        e.Handled = true;
+    }
+
+    private async void PortRefresh_Click(object sender, RoutedEventArgs e) => await LoadPortStatusAsync();
+
+    private async Task LoadPortStatusAsync()
+    {
+        PortRefreshButton.IsEnabled = false;
+        PortUpdatedText.Text = "Loading...";
+        try
+        {
+            var report = await _portStatus.FetchAsync();
+            PortUpdatedText.Text = string.IsNullOrWhiteSpace(report.UpdatedAt) ? "Updated" : $"Updated: {report.UpdatedAt}";
+            PortLeaderNameText.Text = report.LeaderName;
+            PortLeaderRepoText.Text = report.LeaderRepo;
+            PortOverallScoreText.Text = $"{report.LeaderScore:0.0}%";
+            PortTop3Text.Text = $"Top 3 avg: {report.Top3Average:0.0}% · Reached: {report.ReachedLabel}";
+            PortOverallProgressBar.Value = report.LeaderScore;
+            PortMilestonesList.ItemsSource = report.Milestones;
+            PortStoryText.Text = report.StoryLabel;
+            PortRenderText.Text = report.RenderLabel;
+            PortPerfText.Text = $"{report.Fps:0.#} FPS";
+            PortStabilityText.Text = report.StabilityLabel;
+            PortChangesList.ItemsSource = report.Changes;
+        }
+        catch (Exception ex)
+        {
+            PortUpdatedText.Text = "Failed to load: " + ex.Message;
+        }
+        finally
+        {
+            PortRefreshButton.IsEnabled = true;
+        }
+    }
+
+    private async void CheckLauncherUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        CheckLauncherUpdateButton.IsEnabled = false;
+        OpenReleaseButton.Visibility = Visibility.Collapsed;
+        LauncherUpdateStatusText.Text = "Checking for updates...";
+        LauncherUpdateStatusText.Foreground = Brushes.LightSlateGray;
+
+        try
+        {
+            var res = await _launcherUpdates.CheckForUpdateAsync();
+            LauncherUpdateStatusText.Text = res.Message;
+            LauncherUpdateStatusText.Foreground = res.IsUpdateAvailable
+                ? Brushes.Orange
+                : res.HasRelease ? Brushes.LimeGreen : Brushes.LightSlateGray;
+
+            _latestReleaseUrl = res.ReleaseUrl;
+            OpenReleaseButton.Visibility = res.IsUpdateAvailable && !string.IsNullOrWhiteSpace(res.ReleaseUrl)
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            LauncherUpdateStatusText.Text = "Could not check for updates: " + ex.Message;
+            LauncherUpdateStatusText.Foreground = Brushes.IndianRed;
+        }
+        finally
+        {
+            CheckLauncherUpdateButton.IsEnabled = true;
+        }
+    }
+
+    private void OpenRelease_Click(object sender, RoutedEventArgs e)
+    {
+        if (!string.IsNullOrWhiteSpace(_latestReleaseUrl))
+            Process.Start(new ProcessStartInfo(_latestReleaseUrl) { UseShellExecute = true });
     }
 
     /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>

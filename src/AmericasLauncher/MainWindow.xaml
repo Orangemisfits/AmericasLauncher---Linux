@@ -277,9 +277,28 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
-                    <Button Style="{StaticResource CaptionButtonStyle}" Content="—" Click="Minimize_Click" ToolTip="Minimize"/>
-                    <Button Style="{StaticResource CaptionButtonStyle}" Content="□" Click="Maximize_Click" ToolTip="Maximize / Restore"/>
-                    <Button Style="{StaticResource CloseCaptionButtonStyle}" Content="✕" Click="Close_Click" ToolTip="Close"/>
+                    <Button Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click" ToolTip="Minimize">
+                        <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.3"
+                              Data="M0,5 L10,5"
+                              Width="10" Height="10"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Style="{StaticResource CaptionButtonStyle}" Click="Maximize_Click" ToolTip="Maximize / Restore">
+                        <Path x:Name="MaxRestoreIcon"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.3"
+                              Data="M0,0 H9 V9 H0 Z"
+                              Width="10" Height="10"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
+                    <Button Style="{StaticResource CloseCaptionButtonStyle}" Click="Close_Click" ToolTip="Close">
+                        <Path Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.3"
+                              Data="M0,0 L9,9 M9,0 L0,9"
+                              Width="10" Height="10"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                    </Button>
                 </StackPanel>
             </Grid>
         </Border>
@@ -348,32 +367,15 @@
                             </StackPanel>
                         </RadioButton>
 
-                        <!-- Port Status (non-clickable placeholder for future feature) -->
-                        <Border Background="Transparent"
-                                CornerRadius="10"
-                                Height="46"
-                                Margin="0,4"
-                                Padding="18,0"
-                                Opacity="0.45"
-                                IsEnabled="False">
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="📡" Margin="0,0,10,0" Foreground="#94A3B8"/>
-                                    <TextBlock Text="Port Status" FontSize="14" FontWeight="SemiBold" Foreground="#94A3B8"/>
-                                </StackPanel>
-                                <Border Grid.Column="1"
-                                        Background="#263147"
-                                        CornerRadius="4"
-                                        Padding="6,2"
-                                        VerticalAlignment="Center">
-                                    <TextBlock Text="SOON" FontSize="9.5" FontWeight="Bold" Foreground="#94A3B8"/>
-                                </Border>
-                            </Grid>
-                        </Border>
+                        <!-- Port Status -->
+                        <RadioButton x:Name="PortStatusNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     Checked="Nav_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📡" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Port Status" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
 
                         <RadioButton x:Name="SettingsNavButton"
                                      Style="{StaticResource NavRadioStyle}"
@@ -385,18 +387,13 @@
                         </RadioButton>
                     </StackPanel>
 
-                    <!-- Footer Badge -->
-                    <Border Grid.Row="4"
-                            Background="#1B2130"
-                            BorderBrush="#283248"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="12,10">
-                        <StackPanel>
-                            <TextBlock Text="America's Edition" FontSize="12" FontWeight="SemiBold" Foreground="#E2E8F0"/>
-                            <TextBlock Text="5 Runners Configured" FontSize="11" Foreground="#94A3B8" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </Border>
+                    <!-- Simple Launcher Version -->
+                    <TextBlock Grid.Row="4"
+                               x:Name="SidebarVersionText"
+                               Text="v0.5.1"
+                               FontSize="12"
+                               Foreground="#64748B"
+                               HorizontalAlignment="Center"/>
                 </Grid>
             </Border>
 
@@ -545,14 +542,240 @@
                     </Border>
                 </Grid>
 
-                <!-- VIEW 2: SETTINGS -->
+                <!-- VIEW 2: PORT STATUS -->
+                <Grid x:Name="PortStatusView" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Top Attribution & Refresh -->
+                    <Grid Grid.Row="0" Margin="0,0,0,16">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                            <TextBlock Text="Port Status" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                            <TextBlock FontSize="12.5" Foreground="#94A3B8" Margin="0,4,0,0">
+                                <Run Text="Data is fetched live from "/>
+                                <Hyperlink NavigateUri="https://portwatch-vi.xyz/"
+                                           Foreground="#60A5FA"
+                                           RequestNavigate="Hyperlink_RequestNavigate">
+                                    <Run Text="Portwatch VI (https://portwatch-vi.xyz/)"/>
+                                </Hyperlink>
+                                <Run Text=" • "/>
+                                <Run x:Name="PortUpdatedText" Text="Loading..."/>
+                            </TextBlock>
+                        </StackPanel>
+                        <Button x:Name="PortRefreshButton"
+                                Grid.Column="1"
+                                Style="{StaticResource SecondaryButton}"
+                                Content="Refresh"
+                                VerticalAlignment="Center"
+                                Click="PortRefresh_Click"/>
+                    </Grid>
+
+                    <!-- Overall Progress: Closest Effort to Playable -->
+                    <Border Grid.Row="1"
+                            Background="#212838"
+                            BorderBrush="#2E3A52"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="18,16"
+                            Margin="0,0,0,16">
+                        <StackPanel>
+                            <Grid Margin="0,0,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Grid.Column="0">
+                                    <TextBlock Text="Overall progress · closest effort to playable"
+                                               FontSize="12.5"
+                                               FontWeight="SemiBold"
+                                               Foreground="#94A3B8"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                        <TextBlock x:Name="PortLeaderNameText"
+                                                   Text="-"
+                                                   FontSize="18"
+                                                   FontWeight="Bold"
+                                                   Foreground="#F8FAFC"/>
+                                        <TextBlock x:Name="PortLeaderRepoText"
+                                                   Text=""
+                                                   FontSize="12.5"
+                                                   Foreground="#60A5FA"
+                                                   VerticalAlignment="Bottom"
+                                                   Margin="10,0,0,2"/>
+                                    </StackPanel>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                    <TextBlock x:Name="PortOverallScoreText"
+                                               Text="--%"
+                                               FontSize="26"
+                                               FontWeight="Bold"
+                                               Foreground="#F8FAFC"
+                                               HorizontalAlignment="Right"/>
+                                    <TextBlock x:Name="PortTop3Text"
+                                               Text="Top 3 avg: --%"
+                                               FontSize="11.5"
+                                               Foreground="#94A3B8"
+                                               HorizontalAlignment="Right"/>
+                                </StackPanel>
+                            </Grid>
+
+                            <ProgressBar x:Name="PortOverallProgressBar"
+                                         Height="10"
+                                         Minimum="0"
+                                         Maximum="100"
+                                         Value="0"
+                                         Background="#141822"
+                                         Foreground="#2563EB"
+                                         BorderBrush="#2E3A52"
+                                         BorderThickness="1"
+                                         Margin="0,0,0,12"/>
+
+                            <!-- Milestones -->
+                            <ItemsControl x:Name="PortMilestonesList" Margin="0,0,0,12">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="7"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#182030"
+                                                BorderBrush="#2E3A52"
+                                                BorderThickness="1"
+                                                CornerRadius="6"
+                                                Margin="3,0"
+                                                Padding="6,6">
+                                            <StackPanel HorizontalAlignment="Center">
+                                                <TextBlock Text="{Binding Label}"
+                                                           FontSize="11"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="#E2E8F0"
+                                                           HorizontalAlignment="Center"/>
+                                                <TextBlock FontSize="10" HorizontalAlignment="Center" Margin="0,2,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Text" Value="Pending"/>
+                                                            <Setter Property="Foreground" Value="#64748B"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding Reached}" Value="True">
+                                                                    <Setter Property="Text" Value="✓ Reached"/>
+                                                                    <Setter Property="Foreground" Value="#4ADE80"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <!-- 4 Quality Tracks -->
+                            <UniformGrid Columns="4">
+                                <Border Background="#182030" BorderBrush="#2B364D" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="0,0,6,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Story progress" FontSize="11" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="PortStoryText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#182030" BorderBrush="#2B364D" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="3,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Rendering" FontSize="11" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="PortRenderText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#182030" BorderBrush="#2B364D" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="3,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Performance" FontSize="11" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="PortPerfText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                                <Border Background="#182030" BorderBrush="#2B364D" BorderThickness="1" CornerRadius="8" Padding="10,8" Margin="6,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Stability" FontSize="11" Foreground="#94A3B8"/>
+                                        <TextBlock x:Name="PortStabilityText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                    </StackPanel>
+                                </Border>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- What Changed News -->
+                    <Border Grid.Row="2"
+                            Background="#212838"
+                            BorderBrush="#2E3A52"
+                            BorderThickness="1"
+                            CornerRadius="12"
+                            Padding="18,14">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <TextBlock Grid.Row="0"
+                                       Text="What changed"
+                                       FontSize="15"
+                                       FontWeight="Bold"
+                                       Foreground="#F8FAFC"
+                                       Margin="0,0,0,10"/>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                <ItemsControl x:Name="PortChangesList">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border BorderBrush="#2B364D" BorderThickness="0,0,0,1" Padding="0,8">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="86"/>
+                                                        <ColumnDefinition Width="74"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0"
+                                                               Text="{Binding Date}"
+                                                               FontSize="11.5"
+                                                               Foreground="#94A3B8"
+                                                               VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1"
+                                                            Background="#1E3A8A"
+                                                            CornerRadius="4"
+                                                            Padding="6,2"
+                                                            HorizontalAlignment="Left"
+                                                            VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding Kind}"
+                                                                   FontSize="10"
+                                                                   FontWeight="Bold"
+                                                                   Foreground="#DBEAFE"/>
+                                                    </Border>
+                                                    <TextBlock Grid.Column="2"
+                                                               Text="{Binding Text}"
+                                                               FontSize="12.5"
+                                                               Foreground="#E2E8F0"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- VIEW 3: SETTINGS -->
                 <Grid x:Name="SettingsView" Visibility="Collapsed">
                     <StackPanel MaxWidth="820" HorizontalAlignment="Left" Width="820">
                         <TextBlock Text="Settings"
                                    FontSize="22"
                                    FontWeight="Bold"
                                    Foreground="#F8FAFC"/>
-                        <TextBlock Text="Configure your game directory and executable path."
+                        <TextBlock Text="Configure your game directory, executable path, and launcher updates."
                                    FontSize="13"
                                    Foreground="#94A3B8"
                                    Margin="0,4,0,20"/>
@@ -561,7 +784,8 @@
                                 BorderBrush="#2E3A52"
                                 BorderThickness="1"
                                 CornerRadius="12"
-                                Padding="20">
+                                Padding="20"
+                                Margin="0,0,0,16">
                             <StackPanel>
                                 <!-- Game Folder: Button on LEFT, Path on RIGHT -->
                                 <TextBlock Text="Game Folder"
@@ -607,6 +831,40 @@
                                              Margin="12,0,0,0"/>
                                 </Grid>
                             </StackPanel>
+                        </Border>
+
+                        <!-- Launcher Updates Card -->
+                        <Border Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="20">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="210"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="CheckLauncherUpdateButton"
+                                        Grid.Column="0"
+                                        Style="{StaticResource PatriotBlueButton}"
+                                        Content="Check for Updates"
+                                        Click="CheckLauncherUpdate_Click"/>
+                                <TextBlock x:Name="LauncherUpdateStatusText"
+                                           Grid.Column="1"
+                                           Margin="16,0,12,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="13"
+                                           Foreground="#CBD5E1"
+                                           Text="Current version: v0.5.1"
+                                           TextWrapping="Wrap"/>
+                                <Button x:Name="OpenReleaseButton"
+                                        Grid.Column="2"
+                                        Style="{StaticResource PatriotRedButton}"
+                                        Content="Open Release"
+                                        Visibility="Collapsed"
+                                        Click="OpenRelease_Click"/>
+                            </Grid>
                         </Border>
                     </StackPanel>
                 </Grid>
