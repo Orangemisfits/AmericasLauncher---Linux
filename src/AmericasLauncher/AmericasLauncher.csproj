@@ -9,6 +9,7 @@
     <AssemblyName>AmericasLauncher</AssemblyName>
     <RootNamespace>AmericasLauncher</RootNamespace>
     <Version>0.2.0</Version>
+    <ApplicationIcon>assets\americas-logo.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
