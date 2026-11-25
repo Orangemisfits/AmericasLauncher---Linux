@@ -60,10 +60,7 @@
       "cargo build --release -p victory"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": "run \"{gameExe}\" --execute",
     "notes": "Launch Game with VIctory(Belobug)"
   },
   {
@@ -93,7 +90,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": "run \"{gameExe}\" --execute",
     "notes": "Launch Game with Hyphennn"
   },
   {
@@ -123,7 +120,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": "run \"{gameExe}\" --execute",
     "notes": "Launch Game with Vettrox"
   },
   {
@@ -153,7 +150,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": "run \"{gameExe}\" --execute",
     "notes": "Launch Game with VIctory"
   }
 ]
