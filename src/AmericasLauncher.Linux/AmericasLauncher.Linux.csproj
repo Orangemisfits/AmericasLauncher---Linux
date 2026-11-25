@@ -24,8 +24,6 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.23" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.23" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.23" />
-    <!-- vkd3d-proton is released as .tar.zst; decompress it without relying on a system zstd. -->
-    <PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
   </ItemGroup>
 
   <!-- Shared with the Windows launcher. -->

@@ -1,6 +1,6 @@
 # Americas Launcher
 
-A modern launcher that automatically sets up, updates, builds, and launches Xbox Series X|S (GDK) compatibility layers on Windows and Linux — with live port progress tracking built in. On Linux it ships as an AppImage and runs the runners through Wine or Proton (see [Linux](#linux-appimage)).
+A modern launcher that automatically sets up, updates, builds, and launches Xbox Series X|S (GDK) compatibility layers on Windows and Linux — with live port progress tracking built in. On Linux it ships as an AppImage and runs the runners through Proton (see [Linux](#linux-appimage)).
 
 > This project is intended **only for games you legally own**, unpacked on your own PC. Americas Launcher does **not** include, download, or distribute games, keys, or console SDK files.
 
@@ -8,7 +8,7 @@ A modern launcher that automatically sets up, updates, builds, and launches Xbox
 
 ## Features
 
-- **Modern 720p UI:** Clean dark navy & patriot-themed interface with custom window controls and 5 selectable runner cards.
+- **Modern 720p UI:** Clean dark navy & patriot-themed interface with custom window controls and selectable runner cards.
 - **One-Click Install / Update:**
   - Automatically checks and installs missing dependencies via `winget` (Git, Visual Studio C++ Build Tools, Rust).
   - Clones and updates each runner's source repository with `git`, then compiles it locally.
@@ -20,14 +20,13 @@ A modern launcher that automatically sets up, updates, builds, and launches Xbox
 
 ## Supported Runners
 
-Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/AmericasLauncher/Data/runners.json). Click any of the 5 runner cards on the **Launch** screen to switch between them:
+Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/AmericasLauncher/Data/runners.json). Click any of the runner cards on the **Launch** screen to switch between them:
 
 | Runner | Based On / Focus | Repository |
 |---|---|---|
 | **XCL** | Independent Xbox Series compatibility layer | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
 | **Belabug - VIctory Based** | VIctory fork tuned for AMD Radeon GPUs | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
 | **Dexnom - VIctory Based** | Community VIctory fork with D3D12 & shader fixes | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
-| **Zettrox - VIctory Based** | VIctory fork focused on NVIDIA GPUs & stability | [Zettrox/ztrx](https://github.com/Zettrox/ztrx) |
 | **VIctory(Original)** | Original VIctory compatibility layer | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 
 ## Port Status
@@ -106,23 +105,23 @@ Add an entry to `src/AmericasLauncher/Data/runners.json`:
 The Linux launcher (`src/AmericasLauncher.Linux`, built with [Avalonia](https://avaloniaui.net/)) has the same screens as the Windows one. The runners are Windows programs, so on Linux the launcher:
 
 1. **cross-compiles** each runner for `x86_64-pc-windows-msvc` with [cargo-xwin](https://github.com/rust-cross/cargo-xwin) (it downloads the Microsoft C runtime and Windows SDK libraries into `~/.cache/cargo-xwin` on the first build);
-2. **runs** it through **Wine** with [vkd3d-proton](https://github.com/HansKristian-Work/vkd3d-proton) installed into the launcher's Wine prefix (Direct3D 12 on Vulkan), or through **Proton** with [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher);
+2. **runs** it through **Proton** with [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher) (Proton brings Wine, vkd3d-proton for Direct3D 12 on Vulkan, and the Steam Runtime). The runner's console output is shown in the launcher's log, and after a crash the launcher shows the runner's `crashes.log`;
 3. puts the **DirectX Shader Compiler** (`dxcompiler.dll`, `dxil.dll`, from Microsoft's [DXC release](https://github.com/microsoft/DirectXShaderCompiler/releases)) next to runners that need it (XCL);
 4. hands the game paths to the runner as Windows paths on drive `Z:` (`/home/me/Games/GTA VI` → `Z:\home\me\Games\GTA VI`).
 
 ### Linux requirements
 
 - x86_64 CPU with AVX2, a Vulkan driver with mesh shader support (recent Mesa RADV, or NVIDIA's proprietary driver)
-- Build tools and Wine from your distribution (Rust and cargo-xwin are installed automatically into `~/.cargo`, no root needed):
+- Build tools and umu-launcher from your distribution (Rust and cargo-xwin are installed automatically into `~/.cargo`, no root needed):
 
 | Distribution | Command |
 |---|---|
-| Debian / Ubuntu | `sudo apt install git build-essential clang lld llvm wine64` |
-| Fedora | `sudo dnf install git gcc clang lld llvm wine` |
-| Arch / Manjaro / SteamOS (dev mode) | `sudo pacman -S --needed git base-devel clang lld llvm wine` |
-| openSUSE | `sudo zypper install git gcc clang lld llvm wine` |
+| Arch / CachyOS / Manjaro | `sudo pacman -S --needed git base-devel clang lld llvm umu-launcher` |
+| Fedora | `sudo dnf install git gcc clang lld llvm umu-launcher` |
+| Debian / Ubuntu | `sudo apt install git build-essential clang lld llvm`, then umu-launcher from its [releases](https://github.com/Open-Wine-Components/umu-launcher/releases) |
+| openSUSE | `sudo zypper install git gcc clang lld llvm`, then umu-launcher from its [releases](https://github.com/Open-Wine-Components/umu-launcher/releases) |
 
-- **Proton instead of Wine (optional):** install `umu-launcher` (Arch, Fedora, or from its [releases](https://github.com/Open-Wine-Components/umu-launcher/releases)) and choose *Proton (umu-launcher)* in **Settings → Windows runtime**. By default umu downloads and updates GE-Proton itself; you can also point it to a Proton folder.
+- **Proton version:** **Settings → Proton** lists the Proton builds found in your Steam libraries and in `compatibilitytools.d` folders (including `/usr/share/steam/compatibilitytools.d`, e.g. proton-cachyos). Steam's *Proton - Experimental* is the default when it is installed; *GE-Proton (latest)* is downloaded and kept up to date by umu itself. If a runner fails with one Proton, try another one.
 - **Settings → Check Requirements** lists what is found and prints the install command for your distribution.
 
 ### Using the AppImage
@@ -132,11 +131,13 @@ chmod +x AmericasLauncher-*-x86_64.AppImage
 ./AmericasLauncher-*-x86_64.AppImage
 ```
 
-1. **Settings**: select the **Game Folder** and **Game Executable** (or paste their paths), and the **Windows runtime** (Wine binary, or Proton). A custom Wine build or Wine prefix can be set there too.
-2. **Launch**: pick a runner card and click **Install / Update**. The first build takes a while (Rust toolchain, Windows libraries, then the runner itself); the Wine prefix and vkd3d-proton are set up at the end.
-3. Click **Launch Game**. **Stop** ends the game and the Wine processes of the prefix.
+1. **Settings**: select the **Game Folder** and **Game Executable** (or paste their paths), and the **Proton** version. Another Proton prefix can be set there too.
+2. **Launch**: pick a runner card and click **Install / Update**. The first build takes a while (Rust toolchain, Windows libraries, then the runner itself).
+3. Click **Launch Game**. On the first launch umu downloads the Steam Runtime (and GE-Proton if selected) and creates the prefix. **Stop** ends the game and every process of the Proton prefix.
 
-Everything the launcher creates lives in `~/.local/share/AmericasLauncher/` (`config.json`, `launcher.log`, `sources/<runner>`, `prefix/`, `prefix-proton/`, `tools/`).
+**Settings → Add to Applications Menu** (shown when running the AppImage) adds the launcher to your desktop's applications menu; click it again after moving the AppImage. **Copy Log** copies the log, e.g. for a bug report.
+
+Everything the launcher creates lives in `~/.local/share/AmericasLauncher/` (`config.json`, `launcher.log`, `sources/<runner>`, `prefix-proton/`, `tools/`). Inside the prefix, the VIctory runners keep their shader cache and crash logs in `prefix-proton/pfx/drive_c/users/steamuser/AppData/Local/victory/`.
 
 If the AppImage does not start because FUSE is missing, run it with `--appimage-extract-and-run`, or install your distribution's `fuse3` package.
 
@@ -176,8 +177,11 @@ Each runner in `runners.json` has a `linux` object (runners without one are list
 ### Linux troubleshooting
 
 - **A build step fails with `llvm-ml` / `clang-cl` / `lld-link` not found**: install `clang`, `lld` and `llvm` (Debian and Ubuntu keep these tools in `/usr/lib/llvm-<version>/bin`, which the launcher adds to its `PATH`).
-- **Nothing is drawn, or the runner reports no Direct3D 12 device**: check `vulkaninfo` for your GPU and mesh shader support, then **Settings → Prepare Runtime** to reinstall vkd3d-proton (Wine), or try Proton.
-- **More Wine output**: start the AppImage with `WINEDEBUG=err+all` (the launcher hides Wine's messages by default). Extra `WINEDLLOVERRIDES` are kept.
+- **The runner stopped, not the launcher**: when the game exits with an error, the launcher says so and links to the runner's issue tracker. Crashes inside a runner are for its developers: attach the log (**Copy Log**) and the crash logs it lists.
+- **Repository unavailable**: the runner's repository was deleted, renamed or made private. A runner you already built stays usable but can no longer be updated.
+- **The runner exits with a code**: the launcher explains common codes (Wine passes on only the last 8 bits of a Windows exit code: 3 is usually `abort()`, 5 an access violation, 9 a fast fail) and prints the end of the runner's `crashes.log` when it wrote one. Try another Proton version in **Settings**.
+- **Nothing is drawn, or the runner reports no Direct3D 12 device**: check `vulkaninfo` for your GPU and mesh shader support.
+- **Runner output**: Proton gives console programs their own console, so the launcher reads the runner's messages through Wine's `trace+console` debug channel (`WINEDEBUG=-all,err+all,trace+console` by default). Wine keeps about 290 characters of each write, so very long lines end with `…`. Setting `WINEDEBUG` yourself replaces this default.
 - The full log of every session is in `~/.local/share/AmericasLauncher/launcher.log`.
 
 ## License
