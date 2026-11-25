@@ -39,6 +39,14 @@ The **Port Status** tab fetches live data directly from **[Portwatch VI](https:/
 - **Overall progress · closest effort to playable:** Shows the leading build, overall percentage score, top-3 average, milestone progress (`Groundwork` → `Exe runs` → `First frame` → `Main menu` → `In the world` → `Playable` → `Complete`), and the four quality tracks (`Story progress`, `Rendering`, `Performance`, `Stability`).
 - **What changed:** Displays the latest tracked updates and newly discovered community efforts.
 
+## Settings
+
+![Americas Launcher - Settings](docs/images/settings-view.png)
+
+- **Game Folder & Game Executable:** Select your game directory and `.exe` file once; the launcher remembers them automatically.
+- **Storage & Cache:** View how much disk space each installed runner and the VIctory shader/pipeline cache (`%LocalAppData%\victory\cache`) use, and delete any runner or clear the pipeline cache with one click.
+- **In-App Updates:** Click **Check for Updates** to check GitHub Releases. When a new version is available, click **Update Now** to download, extract, and restart into the latest version automatically without visiting GitHub.
+
 ## Requirements
 
 - Windows 10/11 (64-bit) with [winget](https://learn.microsoft.com/windows/package-manager/) (App Installer)
