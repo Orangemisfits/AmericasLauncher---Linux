@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Linux build of Americas Launcher (Avalonia UI). Packaged as an AppImage by
+    packaging/linux/build-appimage.sh. The Windows build (WPF) lives in ../AmericasLauncher;
+    the platform-neutral services and the runner list are shared with it (see the links below).
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>AmericasLauncher</AssemblyName>
+    <RootNamespace>AmericasLauncher</RootNamespace>
+    <Version>1.0.1</Version>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- No ICU dependency: the AppImage then runs on distributions without libicu. -->
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <ApplicationManifest />
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.23" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.23" />
+    <!-- vkd3d-proton is released as .tar.zst; decompress it without relying on a system zstd. -->
+    <PackageReference Include="ZstdSharp.Port" Version="0.8.7" />
+  </ItemGroup>
+
+  <!-- Shared with the Windows launcher. -->
+  <ItemGroup>
+    <Compile Include="..\AmericasLauncher\Services\PortStatusService.cs" Link="Shared\PortStatusService.cs" />
+    <Compile Include="..\AmericasLauncher\Services\LauncherUpdateService.cs" Link="Shared\LauncherUpdateService.cs" />
+    <Content Include="..\AmericasLauncher\Data\runners.json" Link="Data\runners.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <AvaloniaResource Include="..\AmericasLauncher\assets\logo.png" Link="assets\logo.png" />
+  </ItemGroup>
+
+</Project>

@@ -1,6 +1,6 @@
 # Americas Launcher
 
-A modern Windows launcher that automatically sets up, updates, builds, and launches Xbox Series X|S (GDK) compatibility layers on Windows — with live port progress tracking built in.
+A modern launcher that automatically sets up, updates, builds, and launches Xbox Series X|S (GDK) compatibility layers on Windows and Linux — with live port progress tracking built in. On Linux it ships as an AppImage and runs the runners through Wine or Proton (see [Linux](#linux-appimage)).
 
 > This project is intended **only for games you legally own**, unpacked on your own PC. Americas Launcher does **not** include, download, or distribute games, keys, or console SDK files.
 
@@ -40,6 +40,8 @@ The **Port Status** tab fetches live data directly from **[Portwatch VI](https:/
 - **What changed:** Displays the latest tracked updates and newly discovered community efforts.
 
 ## Requirements
+
+> Linux: see [Linux (AppImage)](#linux-appimage).
 
 - Windows 10/11 (64-bit) with [winget](https://learn.microsoft.com/windows/package-manager/) (App Installer)
 - A D3D12 GPU with Shader Model 6.6 and mesh shaders
@@ -97,6 +99,86 @@ Add an entry to `src/AmericasLauncher/Data/runners.json`:
 | `exe` | Built executable, relative to the source folder |
 | `preLaunchArgs` | Optional list of commands run sequentially before `launchArgs` |
 | `launchArgs` | Arguments for the executable (`{gameFolder}` and `{gameExe}` are replaced automatically) |
+| `linux` | Optional Linux recipe, see [Linux runner recipes](#linux-runner-recipes) |
+
+## Linux (AppImage)
+
+The Linux launcher (`src/AmericasLauncher.Linux`, built with [Avalonia](https://avaloniaui.net/)) has the same screens as the Windows one. The runners are Windows programs, so on Linux the launcher:
+
+1. **cross-compiles** each runner for `x86_64-pc-windows-msvc` with [cargo-xwin](https://github.com/rust-cross/cargo-xwin) (it downloads the Microsoft C runtime and Windows SDK libraries into `~/.cache/cargo-xwin` on the first build);
+2. **runs** it through **Wine** with [vkd3d-proton](https://github.com/HansKristian-Work/vkd3d-proton) installed into the launcher's Wine prefix (Direct3D 12 on Vulkan), or through **Proton** with [umu-launcher](https://github.com/Open-Wine-Components/umu-launcher);
+3. puts the **DirectX Shader Compiler** (`dxcompiler.dll`, `dxil.dll`, from Microsoft's [DXC release](https://github.com/microsoft/DirectXShaderCompiler/releases)) next to runners that need it (XCL);
+4. hands the game paths to the runner as Windows paths on drive `Z:` (`/home/me/Games/GTA VI` → `Z:\home\me\Games\GTA VI`).
+
+### Linux requirements
+
+- x86_64 CPU with AVX2, a Vulkan driver with mesh shader support (recent Mesa RADV, or NVIDIA's proprietary driver)
+- Build tools and Wine from your distribution (Rust and cargo-xwin are installed automatically into `~/.cargo`, no root needed):
+
+| Distribution | Command |
+|---|---|
+| Debian / Ubuntu | `sudo apt install git build-essential clang lld llvm wine64` |
+| Fedora | `sudo dnf install git gcc clang lld llvm wine` |
+| Arch / Manjaro / SteamOS (dev mode) | `sudo pacman -S --needed git base-devel clang lld llvm wine` |
+| openSUSE | `sudo zypper install git gcc clang lld llvm wine` |
+
+- **Proton instead of Wine (optional):** install `umu-launcher` (Arch, Fedora, or from its [releases](https://github.com/Open-Wine-Components/umu-launcher/releases)) and choose *Proton (umu-launcher)* in **Settings → Windows runtime**. By default umu downloads and updates GE-Proton itself; you can also point it to a Proton folder.
+- **Settings → Check Requirements** lists what is found and prints the install command for your distribution.
+
+### Using the AppImage
+
+```bash
+chmod +x AmericasLauncher-*-x86_64.AppImage
+./AmericasLauncher-*-x86_64.AppImage
+```
+
+1. **Settings**: select the **Game Folder** and **Game Executable** (or paste their paths), and the **Windows runtime** (Wine binary, or Proton). A custom Wine build or Wine prefix can be set there too.
+2. **Launch**: pick a runner card and click **Install / Update**. The first build takes a while (Rust toolchain, Windows libraries, then the runner itself); the Wine prefix and vkd3d-proton are set up at the end.
+3. Click **Launch Game**. **Stop** ends the game and the Wine processes of the prefix.
+
+Everything the launcher creates lives in `~/.local/share/AmericasLauncher/` (`config.json`, `launcher.log`, `sources/<runner>`, `prefix/`, `prefix-proton/`, `tools/`).
+
+If the AppImage does not start because FUSE is missing, run it with `--appimage-extract-and-run`, or install your distribution's `fuse3` package.
+
+### Building the Linux launcher
+
+```bash
+dotnet run --project src/AmericasLauncher.Linux          # run from source (.NET 8 SDK)
+./packaging/linux/build-appimage.sh                      # → dist/AmericasLauncher-<version>-x86_64.AppImage
+```
+
+### Linux runner recipes
+
+Each runner in `runners.json` has a `linux` object (runners without one are listed, but cannot be installed on Linux):
+
+```json
+"linux": {
+  "dependencies": [ "git", "cc", "clang", "llvm-ml", "rust", "cargo-xwin" ],
+  "buildCommands": [
+    "rustup toolchain install || rustup show",
+    "rustup component add llvm-tools",
+    "cargo xwin build --release -p victory --target x86_64-pc-windows-msvc"
+  ],
+  "exe": "target/x86_64-pc-windows-msvc/release/victory.exe",
+  "needsDxc": false
+}
+```
+
+| Field | Description |
+|---|---|
+| `dependencies` | Checked before building: `git`, `cc`, `clang`, `llvm-ml` (for crates with MASM assembly, e.g. `blake3`) are system packages; `rust` (rustup) and `cargo-xwin` are installed automatically |
+| `buildCommands` | Commands run with `bash` inside the source folder |
+| `exe` | Built executable, relative to the source folder |
+| `needsDxc` | Put `dxcompiler.dll` and `dxil.dll` next to the executable |
+
+`preLaunchArgs` and `launchArgs` are shared with Windows.
+
+### Linux troubleshooting
+
+- **A build step fails with `llvm-ml` / `clang-cl` / `lld-link` not found**: install `clang`, `lld` and `llvm` (Debian and Ubuntu keep these tools in `/usr/lib/llvm-<version>/bin`, which the launcher adds to its `PATH`).
+- **Nothing is drawn, or the runner reports no Direct3D 12 device**: check `vulkaninfo` for your GPU and mesh shader support, then **Settings → Prepare Runtime** to reinstall vkd3d-proton (Wine), or try Proton.
+- **More Wine output**: start the AppImage with `WINEDEBUG=err+all` (the launcher hides Wine's messages by default). Extra `WINEDLLOVERRIDES` are kept.
+- The full log of every session is in `~/.local/share/AmericasLauncher/launcher.log`.
 
 ## License
 

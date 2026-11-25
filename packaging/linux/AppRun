@@ -1,0 +1,6 @@
+#!/bin/sh
+# Entry point of the Americas Launcher AppImage.
+# The launcher is a self-contained .NET program: it needs nothing from the AppImage's environment,
+# and it must not pass AppImage library paths on to the tools it starts (git, cargo, wine).
+HERE="$(dirname "$(readlink -f "$0")")"
+exec "$HERE/usr/lib/americas-launcher/AmericasLauncher" "$@"

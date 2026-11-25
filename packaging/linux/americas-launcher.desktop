@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Americas Launcher
+GenericName=Game Launcher
+Comment=Builds and launches Xbox Series X|S (GDK) compatibility runners through Wine or Proton
+Exec=americas-launcher
+Icon=americas-launcher
+Terminal=false
+Categories=Game;
+Keywords=GTA;Xbox;Wine;Proton;Runner;
+StartupWMClass=AmericasLauncher

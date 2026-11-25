@@ -27,7 +27,16 @@
     ],
     "exe": "target\\release\\xcl.exe",
     "launchArgs": "run \"{gameExe}\"",
-    "notes": "Launch Game with XCL"
+    "notes": "Launch Game with XCL",
+    "linux": {
+      "dependencies": [ "git", "cc", "clang", "rust", "cargo-xwin" ],
+      "buildCommands": [
+        "rustup toolchain install stable --profile minimal --target x86_64-pc-windows-msvc --component llvm-tools",
+        "cargo +stable xwin build --release -p xcl --target x86_64-pc-windows-msvc"
+      ],
+      "exe": "target/x86_64-pc-windows-msvc/release/xcl.exe",
+      "needsDxc": true
+    }
   },
   {
     "id": "VIctory-Belobug",
@@ -64,7 +73,17 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Belabug - VIctory Based"
+    "notes": "Launch Game with Belabug - VIctory Based",
+    "linux": {
+      "dependencies": [ "git", "cc", "clang", "llvm-ml", "rust", "cargo-xwin" ],
+      "buildCommands": [
+        "rustup toolchain install || rustup show",
+        "rustup component add llvm-tools",
+        "[ -f victory.toml ] || cp victory.example.toml victory.toml",
+        "cargo xwin build --release -p victory --target x86_64-pc-windows-msvc"
+      ],
+      "exe": "target/x86_64-pc-windows-msvc/release/victory.exe"
+    }
   },
   {
     "id": "Dexnom",
@@ -98,7 +117,17 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Dexnom - VIctory Based"
+    "notes": "Launch Game with Dexnom - VIctory Based",
+    "linux": {
+      "dependencies": [ "git", "cc", "clang", "llvm-ml", "rust", "cargo-xwin" ],
+      "buildCommands": [
+        "rustup toolchain install || rustup show",
+        "rustup component add llvm-tools",
+        "f=crates/victory-formats/src/bcpack-tables.bin; base=$(grep -o 'https://raw.githubusercontent.com/[^$\"]*' Initialize-FormatTables.ps1); sha=$(grep -o '[0-9A-Fa-f]\\{64\\}' Initialize-FormatTables.ps1 | head -n1); [ -f \"$f\" ] || curl -fsSL -o \"$f\" \"$base$f\"; echo \"${sha,,}  $f\" | sha256sum -c - || { rm -f \"$f\"; false; }",
+        "cargo xwin build --locked --release -p victory --features diagnostics --bins --target x86_64-pc-windows-msvc"
+      ],
+      "exe": "target/x86_64-pc-windows-msvc/release/victory.exe"
+    }
   },
   {
     "id": "Zettrox",
@@ -131,7 +160,16 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Zettrox - VIctory Based"
+    "notes": "Launch Game with Zettrox - VIctory Based",
+    "linux": {
+      "dependencies": [ "git", "cc", "clang", "llvm-ml", "rust", "cargo-xwin" ],
+      "buildCommands": [
+        "rustup toolchain install || rustup show",
+        "rustup component add llvm-tools",
+        "cargo xwin build --release -p victory --target x86_64-pc-windows-msvc"
+      ],
+      "exe": "target/x86_64-pc-windows-msvc/release/victory.exe"
+    }
   },
   {
   "id": "VIctory-origin",
@@ -164,6 +202,15 @@
       "translate --cache --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with VIctory"
+    "notes": "Launch Game with VIctory",
+    "linux": {
+      "dependencies": [ "git", "cc", "clang", "llvm-ml", "rust", "cargo-xwin" ],
+      "buildCommands": [
+        "rustup toolchain install || rustup show",
+        "rustup component add llvm-tools",
+        "cargo xwin build --release -p victory --target x86_64-pc-windows-msvc"
+      ],
+      "exe": "target/x86_64-pc-windows-msvc/release/victory.exe"
+    }
   }
 ]

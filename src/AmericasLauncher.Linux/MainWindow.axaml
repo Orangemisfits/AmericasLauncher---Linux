@@ -1,0 +1,798 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:AmericasLauncher.Models"
+        xmlns:services="using:AmericasLauncher.Services"
+        x:Class="AmericasLauncher.MainWindow"
+        Title="Americas Launcher"
+        Icon="avares://AmericasLauncher/assets/logo.png"
+        Width="1280"
+        Height="720"
+        MinWidth="1024"
+        MinHeight="620"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        Background="#191E29"
+        Foreground="#F8FAFC"
+        FontFamily="fonts:Inter#Inter">
+
+    <Window.Styles>
+        <!-- Caption window control buttons -->
+        <Style Selector="Button.caption">
+            <Setter Property="Width" Value="46"/>
+            <Setter Property="Height" Value="36"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="CornerRadius" Value="0"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.caption:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#252E42"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.caption:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#2D374D"/>
+        </Style>
+        <Style Selector="Button.caption.close:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+        <Style Selector="Button.caption Path">
+            <Setter Property="Stroke" Value="#CBD5E1"/>
+            <Setter Property="StrokeThickness" Value="1.3"/>
+            <Setter Property="Width" Value="10"/>
+            <Setter Property="Height" Value="10"/>
+        </Style>
+        <Style Selector="Button.caption:pointerover Path">
+            <Setter Property="Stroke" Value="#FFFFFF"/>
+        </Style>
+
+        <!-- Sidebar navigation -->
+        <Style Selector="RadioButton.nav">
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Height" Value="46"/>
+            <Setter Property="Margin" Value="0,4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="Root"
+                            Background="Transparent"
+                            CornerRadius="10"
+                            BorderThickness="1"
+                            BorderBrush="Transparent"
+                            Padding="14,0">
+                        <Grid ColumnDefinitions="4,12,*">
+                            <Border Name="Indicator"
+                                    Grid.Column="0"
+                                    Height="22"
+                                    CornerRadius="2"
+                                    Background="Transparent"
+                                    VerticalAlignment="Center"/>
+                            <ContentPresenter Name="PART_ContentPresenter"
+                                              Grid.Column="2"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Left"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.nav:pointerover">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="RadioButton.nav:pointerover /template/ Border#Root">
+            <Setter Property="Background" Value="#212838"/>
+        </Style>
+        <Style Selector="RadioButton.nav:checked">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="RadioButton.nav:checked /template/ Border#Root">
+            <Setter Property="Background" Value="#252E42"/>
+            <Setter Property="BorderBrush" Value="#3B5998"/>
+        </Style>
+        <Style Selector="RadioButton.nav:checked /template/ Border#Indicator">
+            <Setter Property="Background" Value="#DC2626"/>
+        </Style>
+
+        <Style Selector="RadioButton.nav Path.navicon">
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Stroke" Value="#CBD5E1"/>
+            <Setter Property="StrokeThickness" Value="1.3"/>
+            <Setter Property="StrokeLineCap" Value="Round"/>
+            <Setter Property="StrokeJoin" Value="Round"/>
+        </Style>
+        <Style Selector="RadioButton.nav:pointerover Path.navicon, RadioButton.nav:checked Path.navicon">
+            <Setter Property="Stroke" Value="#FFFFFF"/>
+        </Style>
+
+        <!-- Buttons: patriot blue (primary), crimson (launch), slate (secondary) -->
+        <Style Selector="Button.blue, Button.red, Button.secondary">
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+            <Setter Property="FontSize" Value="13.5"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="18,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+        <Style Selector="Button.blue">
+            <Setter Property="Background" Value="#1E40AF"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+        </Style>
+        <Style Selector="Button.blue:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.blue:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1D4ED8"/>
+        </Style>
+        <Style Selector="Button.red">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="BorderBrush" Value="#EF4444"/>
+        </Style>
+        <Style Selector="Button.red:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#DC2626"/>
+            <Setter Property="BorderBrush" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.red:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#991B1B"/>
+        </Style>
+        <Style Selector="Button.secondary">
+            <Setter Property="Background" Value="#232B3B"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+            <Setter Property="Foreground" Value="#F1F5F9"/>
+        </Style>
+        <Style Selector="Button.secondary:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#2D374D"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.secondary:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#252E42"/>
+        </Style>
+        <Style Selector="Button.blue:disabled, Button.red:disabled, Button.secondary:disabled">
+            <Setter Property="Opacity" Value="0.45"/>
+        </Style>
+        <Style Selector="Button.blue:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#1E40AF"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.red:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#B91C1C"/>
+            <Setter Property="BorderBrush" Value="#EF4444"/>
+            <Setter Property="Foreground" Value="#FFFFFF"/>
+        </Style>
+        <Style Selector="Button.secondary:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#232B3B"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+            <Setter Property="Foreground" Value="#F1F5F9"/>
+        </Style>
+
+        <!-- Modern dark text boxes -->
+        <Style Selector="TextBox.modern">
+            <Setter Property="Background" Value="#141923"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="BorderBrush" Value="#2F3B52"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="CaretBrush" Value="#E2E8F0"/>
+        </Style>
+        <Style Selector="TextBox.modern:pointerover /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#141923"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+        </Style>
+        <Style Selector="TextBox.modern:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="#141923"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+        </Style>
+        <Style Selector="TextBox.modern:pointerover, TextBox.modern:focus">
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+        </Style>
+        <Style Selector="TextBox.modern /template/ TextBlock#PART_Watermark, TextBox.modern /template/ TextBlock#PART_FloatingWatermark">
+            <Setter Property="Foreground" Value="#64748B"/>
+        </Style>
+
+        <!-- Console log -->
+        <Style Selector="TextBox.log, TextBox.log:pointerover, TextBox.log:focus">
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+        </Style>
+        <Style Selector="TextBox.log /template/ Border#PART_BorderElement, TextBox.log:pointerover /template/ Border#PART_BorderElement, TextBox.log:focus /template/ Border#PART_BorderElement">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+
+        <!-- Runner cards -->
+        <Style Selector="ListBox.cards ListBoxItem">
+            <Setter Property="Margin" Value="5,0"/>
+            <Setter Property="Padding" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="CardBorder"
+                            Background="#212838"
+                            BorderBrush="#2E3A52"
+                            BorderThickness="1.5"
+                            CornerRadius="12"
+                            Padding="14,12">
+                        <Grid RowDefinitions="4,*">
+                            <Border Name="TopStripe" Grid.Row="0" CornerRadius="2" Background="#334155"/>
+                            <ContentPresenter Name="PART_ContentPresenter"
+                                              Grid.Row="1"
+                                              Margin="0,10,0,0"
+                                              Background="Transparent"
+                                              Content="{TemplateBinding Content}"
+                                              ContentTemplate="{TemplateBinding ContentTemplate}"/>
+                        </Grid>
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem:pointerover /template/ Border#CardBorder">
+            <Setter Property="Background" Value="#273044"/>
+            <Setter Property="BorderBrush" Value="#475B80"/>
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem:selected /template/ Border#CardBorder">
+            <Setter Property="Background" Value="#24304A"/>
+            <Setter Property="BorderBrush" Value="#3B82F6"/>
+        </Style>
+        <Style Selector="ListBox.cards ListBoxItem:selected /template/ Border#TopStripe">
+            <Setter Property="Background">
+                <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                    <GradientStop Color="#DC2626" Offset="0.0"/>
+                    <GradientStop Color="#F8FAFC" Offset="0.5"/>
+                    <GradientStop Color="#2563EB" Offset="1.0"/>
+                </LinearGradientBrush>
+            </Setter>
+        </Style>
+
+        <!-- Cards and small text -->
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="#212838"/>
+            <Setter Property="BorderBrush" Value="#2E3A52"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="12"/>
+        </Style>
+        <Style Selector="Border.track">
+            <Setter Property="Background" Value="#182030"/>
+            <Setter Property="BorderBrush" Value="#2B364D"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,8"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Foreground" Value="#CBD5E1"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+
+        <Style Selector="ProgressBar">
+            <Setter Property="Background" Value="#141822"/>
+            <Setter Property="Foreground" Value="#2563EB"/>
+            <Setter Property="BorderBrush" Value="#252E42"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="5"/>
+            <Setter Property="MinHeight" Value="10"/>
+        </Style>
+
+        <Style Selector="ComboBox.modern">
+            <Setter Property="Background" Value="#141923"/>
+            <Setter Property="BorderBrush" Value="#2F3B52"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="12,9"/>
+            <Setter Property="FontSize" Value="13"/>
+        </Style>
+
+        <!-- Invisible window resize grips (the window draws its own frame) -->
+        <Style Selector="Border.grip">
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </Window.Styles>
+
+    <Border BorderBrush="#252E42" BorderThickness="1">
+        <Panel>
+            <Grid x:Name="RootGrid" RowDefinitions="36,3,*">
+
+                <!-- CUSTOM DARK TITLE BAR -->
+                <Border x:Name="TitleBar"
+                        Grid.Row="0"
+                        Background="#141822"
+                        BorderBrush="#252E42"
+                        BorderThickness="0,0,0,1"
+                        PointerPressed="TitleBar_PointerPressed">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0" IsHitTestVisible="False">
+                            <Image Source="avares://AmericasLauncher/assets/logo.png" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
+                            <TextBlock x:Name="TitleText"
+                                       Text="Americas Launcher"
+                                       FontSize="12.5"
+                                       FontWeight="SemiBold"
+                                       Foreground="#E2E8F0"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Classes="caption" Click="Minimize_Click" ToolTip.Tip="Minimize">
+                                <Path Data="M0,5 L10,5"/>
+                            </Button>
+                            <Button Classes="caption" Click="Maximize_Click" ToolTip.Tip="Maximize / Restore">
+                                <Path x:Name="MaxRestoreIcon" Data="M0,0 H9 V9 H0 Z"/>
+                            </Button>
+                            <Button Classes="caption close" Click="Close_Click" ToolTip.Tip="Close">
+                                <Path Data="M0,0 L9,9 M9,0 L0,9"/>
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <!-- Subtle American flag accent line -->
+                <Border Grid.Row="1">
+                    <Border.Background>
+                        <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+                            <GradientStop Color="#B91C1C" Offset="0.0"/>
+                            <GradientStop Color="#F8FAFC" Offset="0.5"/>
+                            <GradientStop Color="#1D4ED8" Offset="1.0"/>
+                        </LinearGradientBrush>
+                    </Border.Background>
+                </Border>
+
+                <Grid Grid.Row="2" ColumnDefinitions="240,*">
+
+                    <!-- LEFT SIDEBAR -->
+                    <Border Grid.Column="0"
+                            Background="#141822"
+                            BorderBrush="#252E42"
+                            BorderThickness="0,0,1,0"
+                            Padding="18,20">
+                        <Grid RowDefinitions="Auto,28,Auto,*,Auto">
+                            <StackPanel Grid.Row="0" HorizontalAlignment="Center">
+                                <Image Source="avares://AmericasLauncher/assets/logo.png"
+                                       Width="96"
+                                       Height="96"
+                                       Stretch="Uniform"
+                                       RenderOptions.BitmapInterpolationMode="HighQuality"/>
+                                <TextBlock Text="AMERICAS LAUNCHER"
+                                           Margin="0,12,0,2"
+                                           FontSize="14"
+                                           FontWeight="Bold"
+                                           Foreground="#F8FAFC"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="GTA VI • Runner Hub"
+                                           FontSize="11.5"
+                                           Foreground="#94A3B8"
+                                           HorizontalAlignment="Center"/>
+                            </StackPanel>
+
+                            <Border Grid.Row="1" Height="1" Background="#252E42" VerticalAlignment="Center"/>
+
+                            <StackPanel Grid.Row="2">
+                                <RadioButton x:Name="LaunchNavButton" Classes="nav" GroupName="nav" IsChecked="True" IsCheckedChanged="Nav_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Classes="navicon" Data="M8,1 C10.4,2.8 11,5.6 11,8.6 L11,11.5 L5,11.5 L5,8.6 C5,5.6 5.6,2.8 8,1 Z M9.3,6 A1.3,1.3 0 1 1 6.7,6 A1.3,1.3 0 1 1 9.3,6 Z M5,8.8 L3,11.6 L3,13.6 L5,11.5 M11,8.8 L13,11.6 L13,13.6 L11,11.5 M6.6,11.5 L8,14.8 L9.4,11.5" RenderTransform="rotate(45deg)"/>
+                                        <TextBlock Text="Launch" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="PortStatusNavButton" Classes="nav" GroupName="nav" IsCheckedChanged="Nav_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Classes="navicon" Data="M9.6,8 A1.6,1.6 0 1 1 6.4,8 A1.6,1.6 0 1 1 9.6,8 Z M5.2,5.2 A4,4 0 0 0 5.2,10.8 M10.8,5.2 A4,4 0 0 1 10.8,10.8 M2.9,2.9 A7.2,7.2 0 0 0 2.9,13.1 M13.1,2.9 A7.2,7.2 0 0 1 13.1,13.1"/>
+                                        <TextBlock Text="Port Status" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="SettingsNavButton" Classes="nav" GroupName="nav" IsCheckedChanged="Nav_Checked">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Path Classes="navicon" Data="M13.10,6.23 L15.03,6.46 L15.03,9.54 L13.10,9.77 L12.86,10.36 L14.06,11.88 L11.88,14.06 L10.36,12.86 L9.77,13.10 L9.54,15.03 L6.46,15.03 L6.23,13.10 L5.64,12.86 L4.12,14.06 L1.94,11.88 L3.14,10.36 L2.90,9.77 L0.97,9.54 L0.97,6.46 L2.90,6.23 L3.14,5.64 L1.94,4.12 L4.12,1.94 L5.64,3.14 L6.23,2.90 L6.46,0.97 L9.54,0.97 L9.77,2.90 L10.36,3.14 L11.88,1.94 L14.06,4.12 L12.86,5.64 Z M10.30,8 A2.3,2.3 0 1 1 5.70,8 A2.3,2.3 0 1 1 10.30,8 Z"/>
+                                        <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </StackPanel>
+
+                            <TextBlock Grid.Row="4"
+                                       x:Name="SidebarVersionText"
+                                       Text="v1.0.1"
+                                       FontSize="12"
+                                       Foreground="#64748B"
+                                       HorizontalAlignment="Center"/>
+                        </Grid>
+                    </Border>
+
+                    <!-- RIGHT CONTENT AREA -->
+                    <Grid Grid.Column="1" Margin="24,20">
+
+                        <!-- VIEW 1: LAUNCH -->
+                        <Grid x:Name="LaunchView" RowDefinitions="116,Auto,Auto,Auto,*">
+
+                            <ListBox x:Name="RunnerBox"
+                                     Grid.Row="0"
+                                     Classes="cards"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     Padding="0"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                                     Margin="-5,0,-5,14">
+                                <ListBox.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <UniformGrid Columns="5" Rows="1"/>
+                                    </ItemsPanelTemplate>
+                                </ListBox.ItemsPanel>
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="models:RunnerProfile">
+                                        <Grid RowDefinitions="Auto,*">
+                                            <TextBlock Grid.Row="0"
+                                                       Text="{Binding Name}"
+                                                       FontSize="13.5"
+                                                       FontWeight="Bold"
+                                                       Foreground="#F8FAFC"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Grid.Row="1"
+                                                       Text="{Binding Notes}"
+                                                       FontSize="11"
+                                                       Foreground="#94A3B8"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,6,0,0"
+                                                       VerticalAlignment="Top"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <!-- Action bar: Install/Update, Launch Game, Stop, Version, Status -->
+                            <Grid Grid.Row="1" Margin="0,0,0,12" ColumnDefinitions="Auto,*,Auto">
+                                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                    <Button x:Name="InstallButton" Classes="blue" Content="Install / Update" Click="Install_Click"/>
+                                    <Button x:Name="LaunchButton" Classes="red" Content="▶  Launch Game" Margin="10,0,0,0" Click="Launch_Click"/>
+                                    <Button x:Name="StopButton" Classes="secondary" Content="■  Stop" Margin="10,0,0,0" IsEnabled="False" Click="Stop_Click"
+                                            ToolTip.Tip="Stop the current setup, or end the game and its Wine processes"/>
+                                </StackPanel>
+
+                                <TextBlock x:Name="VersionText"
+                                           Grid.Column="1"
+                                           Margin="18,0,12,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="13"
+                                           Foreground="#CBD5E1"
+                                           Text="Emulator version: -"
+                                           TextTrimming="CharacterEllipsis"/>
+
+                                <Border Grid.Column="2"
+                                        Background="#212838"
+                                        BorderBrush="#2E3A52"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="12,6"
+                                        VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatusText" FontSize="12.5" FontWeight="SemiBold" Text=""/>
+                                </Border>
+                            </Grid>
+
+                            <!-- Red warning banner when Game Folder / Exe is missing -->
+                            <Border x:Name="MissingPathsBanner"
+                                    Grid.Row="2"
+                                    Background="#450A0A"
+                                    BorderBrush="#DC2626"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    Padding="14,10"
+                                    Margin="0,0,0,12"
+                                    IsVisible="False">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="⚠" FontSize="14" Foreground="#FCA5A5" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Game Folder and Game Exe are not selected. Please select them in Settings."
+                                               FontSize="13"
+                                               FontWeight="SemiBold"
+                                               Foreground="#FCA5A5"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
+
+                            <ProgressBar x:Name="Progress" Grid.Row="3" Height="10" Margin="0,0,0,12"/>
+
+                            <!-- Console / log box -->
+                            <Border Grid.Row="4"
+                                    Background="#0F131C"
+                                    BorderBrush="#273145"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="4">
+                                <TextBox x:Name="LogBox"
+                                         Classes="log"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         IsReadOnly="True"
+                                         TextWrapping="Wrap"
+                                         AcceptsReturn="True"
+                                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                         FontFamily="DejaVu Sans Mono, Liberation Mono, Noto Sans Mono, monospace"
+                                         FontSize="12.5"
+                                         Padding="10"
+                                         VerticalContentAlignment="Top"/>
+                            </Border>
+                        </Grid>
+
+                        <!-- VIEW 2: PORT STATUS -->
+                        <Grid x:Name="PortStatusView" IsVisible="False" RowDefinitions="Auto,Auto,*">
+
+                            <Grid Grid.Row="0" Margin="0,0,0,16" ColumnDefinitions="*,Auto">
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="Port Status" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                    <WrapPanel Margin="0,4,0,0">
+                                        <TextBlock Text="Data is fetched live from " FontSize="12.5" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                        <HyperlinkButton NavigateUri="https://portwatch-vi.xyz/"
+                                                         Padding="0"
+                                                         FontSize="12.5"
+                                                         Foreground="#60A5FA"
+                                                         VerticalAlignment="Center"
+                                                         Content="Portwatch VI (https://portwatch-vi.xyz/)"/>
+                                        <TextBlock Text=" • " FontSize="12.5" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                        <TextBlock x:Name="PortUpdatedText" Text="Loading..." FontSize="12.5" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                    </WrapPanel>
+                                </StackPanel>
+                                <Button x:Name="PortRefreshButton"
+                                        Grid.Column="1"
+                                        Classes="secondary"
+                                        Content="Refresh"
+                                        VerticalAlignment="Center"
+                                        Click="PortRefresh_Click"/>
+                            </Grid>
+
+                            <!-- Overall progress: closest effort to playable -->
+                            <Border Grid.Row="1" Classes="card" Padding="18,16" Margin="0,0,0,16">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,10" ColumnDefinitions="*,Auto">
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="Overall progress · closest effort to playable"
+                                                       FontSize="12.5"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="#94A3B8"/>
+                                            <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                                                <TextBlock x:Name="PortLeaderNameText" Text="-" FontSize="18" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                                <TextBlock x:Name="PortLeaderRepoText"
+                                                           Text=""
+                                                           FontSize="12.5"
+                                                           Foreground="#60A5FA"
+                                                           VerticalAlignment="Bottom"
+                                                           Margin="10,0,0,2"/>
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                            <TextBlock x:Name="PortOverallScoreText" Text="--%" FontSize="26" FontWeight="Bold" Foreground="#F8FAFC" HorizontalAlignment="Right"/>
+                                            <TextBlock x:Name="PortTop3Text" Text="Top 3 avg: --%" FontSize="11.5" Foreground="#94A3B8" HorizontalAlignment="Right"/>
+                                        </StackPanel>
+                                    </Grid>
+
+                                    <ProgressBar x:Name="PortOverallProgressBar"
+                                                 Height="10"
+                                                 Minimum="0"
+                                                 Maximum="100"
+                                                 Value="0"
+                                                 BorderBrush="#2E3A52"
+                                                 Margin="0,0,0,12"/>
+
+                                    <!-- Milestones -->
+                                    <ItemsControl x:Name="PortMilestonesList" Margin="0,0,0,12">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <UniformGrid Columns="7"/>
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="services:PortMilestone">
+                                                <Border Background="#182030"
+                                                        BorderBrush="#2E3A52"
+                                                        BorderThickness="1"
+                                                        CornerRadius="6"
+                                                        Margin="3,0"
+                                                        Padding="6,6">
+                                                    <StackPanel HorizontalAlignment="Center">
+                                                        <TextBlock Text="{Binding Label}"
+                                                                   FontSize="11"
+                                                                   FontWeight="SemiBold"
+                                                                   Foreground="#E2E8F0"
+                                                                   HorizontalAlignment="Center"/>
+                                                        <TextBlock Text="✓ Reached" FontSize="10" Foreground="#4ADE80" HorizontalAlignment="Center" Margin="0,2,0,0"
+                                                                   IsVisible="{Binding Reached}"/>
+                                                        <TextBlock Text="Pending" FontSize="10" Foreground="#64748B" HorizontalAlignment="Center" Margin="0,2,0,0"
+                                                                   IsVisible="{Binding !Reached}"/>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <!-- 4 quality tracks -->
+                                    <UniformGrid Columns="4">
+                                        <Border Classes="track" Margin="0,0,6,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Story progress" FontSize="11" Foreground="#94A3B8"/>
+                                                <TextBlock x:Name="PortStoryText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Classes="track" Margin="3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Rendering" FontSize="11" Foreground="#94A3B8"/>
+                                                <TextBlock x:Name="PortRenderText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Classes="track" Margin="3,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Performance" FontSize="11" Foreground="#94A3B8"/>
+                                                <TextBlock x:Name="PortPerfText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                        <Border Classes="track" Margin="6,0,0,0">
+                                            <StackPanel>
+                                                <TextBlock Text="Stability" FontSize="11" Foreground="#94A3B8"/>
+                                                <TextBlock x:Name="PortStabilityText" Text="-" FontSize="12.5" FontWeight="SemiBold" Foreground="#F8FAFC" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- What changed -->
+                            <Border Grid.Row="2" Classes="card" Padding="18,14">
+                                <Grid RowDefinitions="Auto,*">
+                                    <TextBlock Grid.Row="0" Text="What changed" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+                                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                                        <ItemsControl x:Name="PortChangesList">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="services:PortChangeItem">
+                                                    <Border BorderBrush="#2B364D" BorderThickness="0,0,0,1" Padding="0,8">
+                                                        <Grid ColumnDefinitions="86,74,*">
+                                                            <TextBlock Grid.Column="0" Text="{Binding Date}" FontSize="11.5" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                                            <Border Grid.Column="1"
+                                                                    Background="#1E3A8A"
+                                                                    CornerRadius="4"
+                                                                    Padding="6,2"
+                                                                    HorizontalAlignment="Left"
+                                                                    VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding Kind}" FontSize="10" FontWeight="Bold" Foreground="#DBEAFE"/>
+                                                            </Border>
+                                                            <TextBlock Grid.Column="2" Text="{Binding Text}" FontSize="12.5" Foreground="#E2E8F0" TextWrapping="Wrap" VerticalAlignment="Center"/>
+                                                        </Grid>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Grid>
+
+                        <!-- VIEW 3: SETTINGS -->
+                        <ScrollViewer x:Name="SettingsView" IsVisible="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel MaxWidth="820" HorizontalAlignment="Left" Margin="0,0,16,0">
+                                <TextBlock Text="Settings" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Configure your game directory, executable path, the Windows runtime (Wine / Proton) and launcher updates."
+                                           FontSize="13"
+                                           Foreground="#94A3B8"
+                                           Margin="0,4,0,20"/>
+
+                                <Border Classes="card" Padding="20" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock Classes="label" Text="Game Folder"/>
+                                        <Grid Margin="0,0,0,18" ColumnDefinitions="210,*">
+                                            <Button Grid.Column="0" Classes="blue" HorizontalAlignment="Stretch" Content="Select Game Folder" Click="BrowseFolder_Click"/>
+                                            <TextBox x:Name="GameFolderBox" Grid.Column="1" Classes="modern" Margin="12,0,0,0"/>
+                                        </Grid>
+
+                                        <TextBlock Classes="label" Text="Game Executable"/>
+                                        <Grid ColumnDefinitions="210,*">
+                                            <Button Grid.Column="0" Classes="secondary" HorizontalAlignment="Stretch" Content="Select Game Exe" Click="BrowseExe_Click"/>
+                                            <TextBox x:Name="GameExeBox" Grid.Column="1" Classes="modern" Margin="12,0,0,0"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Windows runtime (Linux only) -->
+                                <Border Classes="card" Padding="20" Margin="0,0,0,16">
+                                    <StackPanel>
+                                        <TextBlock Text="Windows runtime" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                        <TextBlock Classes="hint" Margin="0,4,0,16"
+                                                   Text="The runners are Windows programs. They are cross-compiled on your PC and run through Wine with vkd3d-proton (Direct3D 12 on Vulkan), or through Proton with umu-launcher."/>
+
+                                        <TextBlock Classes="label" Text="Runtime"/>
+                                        <Grid Margin="0,0,0,18" ColumnDefinitions="210,*">
+                                            <ComboBox x:Name="RuntimeBox" Grid.Column="0" Classes="modern" HorizontalAlignment="Stretch" SelectedIndex="0">
+                                                <ComboBoxItem Content="Wine"/>
+                                                <ComboBoxItem Content="Proton (umu-launcher)"/>
+                                            </ComboBox>
+                                            <TextBlock x:Name="RuntimeFoundText" Grid.Column="1" Margin="14,0,0,0" FontSize="12.5" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                        </Grid>
+
+                                        <StackPanel x:Name="WinePanel">
+                                            <TextBlock Classes="label" Text="Wine binary"/>
+                                            <Grid Margin="0,0,0,18" ColumnDefinitions="210,*">
+                                                <Button Grid.Column="0" Classes="secondary" HorizontalAlignment="Stretch" Content="Select Wine Binary" Click="BrowseWine_Click"/>
+                                                <TextBox x:Name="WineCommandBox" Grid.Column="1" Classes="modern" Margin="12,0,0,0" Watermark="wine"/>
+                                            </Grid>
+                                        </StackPanel>
+
+                                        <StackPanel x:Name="ProtonPanel" IsVisible="False">
+                                            <TextBlock Classes="label" Text="Proton version (PROTONPATH)"/>
+                                            <TextBox x:Name="ProtonPathBox" Classes="modern" Margin="0,0,0,6" Watermark="GE-Proton"/>
+                                            <TextBlock Classes="hint" Margin="0,0,0,18"
+                                                       Text="GE-Proton: umu downloads and updates the latest GE-Proton. Or the folder of a Proton build, e.g. ~/.steam/steam/compatibilitytools.d/GE-Proton10-25."/>
+                                        </StackPanel>
+
+                                        <TextBlock Classes="label" Text="Wine prefix"/>
+                                        <Grid Margin="0,0,0,18" ColumnDefinitions="210,*">
+                                            <Button Grid.Column="0" Classes="secondary" HorizontalAlignment="Stretch" Content="Select Prefix Folder" Click="BrowsePrefix_Click"/>
+                                            <TextBox x:Name="PrefixBox" Grid.Column="1" Classes="modern" Margin="12,0,0,0"/>
+                                        </Grid>
+
+                                        <WrapPanel>
+                                            <Button x:Name="PrepareRuntimeButton" Classes="blue" Content="Prepare Runtime" Margin="0,0,10,8" Click="PrepareRuntime_Click"
+                                                    ToolTip.Tip="Create the Wine prefix and install vkd3d-proton into it"/>
+                                            <Button x:Name="CheckRequirementsButton" Classes="secondary" Content="Check Requirements" Margin="0,0,10,8" Click="CheckRequirements_Click"
+                                                    ToolTip.Tip="List the build tools and runtime found on this system"/>
+                                            <Button Classes="secondary" Content="Open Data Folder" Margin="0,0,10,8" Click="OpenDataFolder_Click"
+                                                    ToolTip.Tip="~/.local/share/AmericasLauncher: sources, prefix, logs"/>
+                                        </WrapPanel>
+                                        <TextBlock x:Name="RuntimeStatusText" Classes="hint" Margin="0,4,0,0"/>
+                                    </StackPanel>
+                                </Border>
+
+                                <!-- Launcher updates -->
+                                <Border Classes="card" Padding="20">
+                                    <Grid ColumnDefinitions="210,*,Auto">
+                                        <Button x:Name="CheckLauncherUpdateButton" Grid.Column="0" Classes="blue" HorizontalAlignment="Stretch"
+                                                Content="Check for Updates" Click="CheckLauncherUpdate_Click"/>
+                                        <TextBlock x:Name="LauncherUpdateStatusText"
+                                                   Grid.Column="1"
+                                                   Margin="16,0,12,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="13"
+                                                   Foreground="#CBD5E1"
+                                                   Text="Current version: v1.0.1"
+                                                   TextWrapping="Wrap"/>
+                                        <Button x:Name="OpenReleaseButton" Grid.Column="2" Classes="red" Content="Open Release" IsVisible="False" Click="OpenRelease_Click"/>
+                                    </Grid>
+                                </Border>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Grid>
+            </Grid>
+
+            <!-- Resize grips along the edges (hidden while maximized) -->
+            <Panel x:Name="GripsPanel">
+                <Border Classes="grip" Tag="West" Width="6" HorizontalAlignment="Left" Margin="0,8" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="East" Width="6" HorizontalAlignment="Right" Margin="0,8" Cursor="SizeWestEast" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="North" Height="4" VerticalAlignment="Top" Margin="8,0,150,0" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="South" Height="6" VerticalAlignment="Bottom" Margin="8,0" Cursor="SizeNorthSouth" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="NorthWest" Width="8" Height="8" HorizontalAlignment="Left" VerticalAlignment="Top" Cursor="TopLeftCorner" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="SouthWest" Width="10" Height="10" HorizontalAlignment="Left" VerticalAlignment="Bottom" Cursor="BottomLeftCorner" PointerPressed="Grip_PointerPressed"/>
+                <Border Classes="grip" Tag="SouthEast" Width="12" Height="12" HorizontalAlignment="Right" VerticalAlignment="Bottom" Cursor="BottomRightCorner" PointerPressed="Grip_PointerPressed"/>
+            </Panel>
+        </Panel>
+    </Border>
+</Window>
