@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-only
+using System.ComponentModel;
 using System.Text.Json.Serialization;
 
 namespace AmericasLauncher.Models;
+
+public enum RunnerHealthState
+{
+    NotInstalled,
+    UpToDate,
+    UpdateAvailable,
+    Broken
+}
 
 public sealed class Dependency
 {
@@ -17,8 +26,33 @@ public sealed class Dependency
     [JsonPropertyName("wingetOverride")] public string? WingetOverride { get; set; }
 }
 
-public sealed class RunnerProfile
+public sealed class RunnerProfile : INotifyPropertyChanged
 {
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private RunnerHealthState _healthState = RunnerHealthState.NotInstalled;
+
+    [JsonIgnore]
+    public RunnerHealthState HealthState
+    {
+        get => _healthState;
+        set
+        {
+            if (_healthState == value) return;
+            _healthState = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HealthState)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(StatusColor)));
+        }
+    }
+
+    [JsonIgnore]
+    public string StatusColor => HealthState switch
+    {
+        RunnerHealthState.UpToDate => "#22C55E",        // Green
+        RunnerHealthState.Broken => "#EF4444",          // Red
+        RunnerHealthState.UpdateAvailable => "#EAB308", // Yellow
+        _ => "#0F172A"                                  // Black (Not Installed)
+    };
     [JsonPropertyName("id")] public string Id { get; set; } = "";
     [JsonPropertyName("name")] public string Name { get; set; } = "";
     [JsonPropertyName("gitUrl")] public string GitUrl { get; set; } = "";

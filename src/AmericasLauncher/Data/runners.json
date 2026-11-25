@@ -27,7 +27,7 @@
     ],
     "exe": "target\\release\\xcl.exe",
     "launchArgs": "run \"{gameFolder}\"",
-    "notes": "Launch Game with XCL"
+    "notes": "Best with Both"
   },
   {
     "id": "VIctory-Belobug",
@@ -61,7 +61,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Belabug - VIctory Based"
+    "notes": "Best with AMD"
   },
   {
     "id": "Dexnom",
@@ -95,7 +95,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Dexnom - VIctory Based"
+    "notes": "Best with Both"
   },
   {
     "id": "VItoriaBR",
@@ -128,7 +128,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with VItoriaBr - VIctory Based"
+    "notes": "Best with Both"
   },
   {
   "id": "VIctory-origin",
@@ -161,6 +161,39 @@
       "translate --cache --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with VIctory"
+    "notes": "Best with Unknown"
+  },
+  {
+    "id": "hyphenn",
+    "name": "hyphenn - VIctory Based",
+    "gitUrl": "https://github.com/fxceless/victory-fork.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "preLaunchArgs": [
+      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
+    ],
+    "launchArgs": "run \"{gameExe}\" --execute",
+    "notes": "Best with Unknown"
   }
 ]

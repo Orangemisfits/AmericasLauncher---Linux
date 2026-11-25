@@ -27,6 +27,7 @@ public partial class MainWindow : Window
     private string? _latestReleaseNotes;
     private DispatcherTimer? _toastTimer;
     private int _toastCountdown;
+    private Process? _runningProcess;
 
     public MainWindow()
     {
@@ -57,6 +58,9 @@ public partial class MainWindow : Window
             Loaded += async (_, _) => await AutoCheckUpdateAsync();
         }
 
+        Loaded += async (_, _) => await CheckAllRunnersHealthAsync();
+        UpdateRunnerLegendAndButtons(Selected);
+
         // Attached after the initial selection so it does not fire during setup.
         RunnerBox.SelectionChanged += async (_, _) =>
         {
@@ -66,6 +70,7 @@ public partial class MainWindow : Window
                 _configService.Save(_config);
             }
             UpdatePipelineState();
+            UpdateRunnerLegendAndButtons(Selected);
             await RefreshVersionAsync();
         };
         Loaded += async (_, _) => await RefreshVersionAsync();
@@ -415,10 +420,46 @@ public partial class MainWindow : Window
 
     private void SetBusy(bool busy)
     {
-        InstallButton.IsEnabled = !busy;
-        LaunchButton.IsEnabled = !busy;
+        var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
+        InstallButton.IsEnabled = !busy && !isBroken;
+        LaunchButton.IsEnabled = !busy || (_runningProcess != null && !_runningProcess.HasExited);
         RunnerBox.IsEnabled = !busy;
         Progress.IsIndeterminate = busy;
+    }
+
+    private async Task CheckAllRunnersHealthAsync()
+    {
+        var tasks = _profiles.Select(async p =>
+        {
+            var state = await _runners.CheckHealthAsync(p);
+            Dispatcher.Invoke(() =>
+            {
+                p.HealthState = state;
+                if (Selected?.Id == p.Id)
+                    UpdateRunnerLegendAndButtons(p);
+            });
+        });
+        await Task.WhenAll(tasks);
+    }
+
+    private void UpdateRunnerLegendAndButtons(RunnerProfile? profile)
+    {
+        if (profile == null)
+        {
+            RunnerColorLegendText.Text = "Please select a runner";
+            InstallButton.IsEnabled = false;
+            return;
+        }
+
+        RunnerColorLegendText.Text = profile.HealthState switch
+        {
+            RunnerHealthState.UpToDate => "Green: Runner is installed and up to date.",
+            RunnerHealthState.Broken => "Red: Runner repository was deleted or is no longer working.",
+            RunnerHealthState.UpdateAvailable => "Yellow: Runner is installed, but an update is available.",
+            _ => "Black: Runner is not installed yet."
+        };
+
+        InstallButton.IsEnabled = profile.HealthState != RunnerHealthState.Broken && !Progress.IsIndeterminate;
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -489,6 +530,20 @@ public partial class MainWindow : Window
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
+        if (_runningProcess != null && !_runningProcess.HasExited)
+        {
+            try
+            {
+                _runningProcess.Kill(entireProcessTree: true);
+                Log("Game stopped.");
+            }
+            catch (Exception ex)
+            {
+                Log("ERROR stopping game: " + ex.Message);
+            }
+            return;
+        }
+
         if (Selected is not { } profile) return;
 
         if (!_runners.IsInstalled(profile)) { Log("Click 'Install / Update' first."); return; }
@@ -511,15 +566,23 @@ public partial class MainWindow : Window
         try
         {
             var usePipeline = PipelineToggleButton.IsEnabled && PipelineToggleButton.IsChecked == true;
-            await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log, usePipeline);
+            _runningProcess = await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log, usePipeline);
+            LaunchButton.Content = "■  Stop Game";
+            LaunchButton.IsEnabled = true;
             Log("Started.");
+
+            _runningProcess.Exited += (_, _) => Dispatcher.Invoke(() =>
+            {
+                _runningProcess = null;
+                LaunchButton.Content = "▶  Launch Game";
+                SetBusy(false);
+            });
         }
         catch (Exception ex)
         {
+            _runningProcess = null;
+            LaunchButton.Content = "▶  Launch Game";
             Log("ERROR: " + ex.Message);
-        }
-        finally
-        {
             SetBusy(false);
         }
     }

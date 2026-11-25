@@ -103,6 +103,43 @@ public sealed class RunnerService
         }
     }
 
+    public async Task<RunnerHealthState> CheckHealthAsync(RunnerProfile p, CancellationToken ct = default)
+    {
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(15));
+
+            var lines = new List<string>();
+            var code = await ProcessRunner.RunAsync(
+                "git", $"ls-remote \"{p.GitUrl}\" HEAD", null,
+                s => { lock (lines) lines.Add(s); }, cts.Token);
+
+            if (code != 0)
+                return RunnerHealthState.Broken;
+
+            if (!IsInstalled(p))
+                return RunnerHealthState.NotInstalled;
+
+            var local = await GetHeadAsync(SourceDir(p), cts.Token, full: true);
+            string remote;
+            lock (lines)
+            {
+                remote = lines.Select(l => l.Trim())
+                    .FirstOrDefault(l => l.Length >= 40 && l[..40].All(Uri.IsHexDigit))?[..40] ?? "";
+            }
+
+            if (local != "" && remote != "" && !string.Equals(local, remote, StringComparison.OrdinalIgnoreCase))
+                return RunnerHealthState.UpdateAvailable;
+
+            return RunnerHealthState.UpToDate;
+        }
+        catch
+        {
+            return IsInstalled(p) ? RunnerHealthState.UpToDate : RunnerHealthState.NotInstalled;
+        }
+    }
+
     /// <summary>Returns true when the runner is built and ready to launch.</summary>
     public async Task<bool> InstallOrUpdateAsync(
         RunnerProfile p, AppConfig config, Action<string> log, CancellationToken ct = default)
