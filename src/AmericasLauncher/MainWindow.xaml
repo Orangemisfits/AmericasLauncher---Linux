@@ -1,0 +1,35 @@
+<Window x:Class="AmericasLauncher.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Americas Launcher" Height="460" Width="620" WindowStartupLocation="CenterScreen">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,10">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="GamePathBox" IsReadOnly="True" Padding="4"/>
+            <Button Grid.Column="1" Content="Select game..." Margin="8,0,0,0" Padding="12,4" Click="BrowseGame_Click"/>
+        </Grid>
+
+        <ComboBox x:Name="EmulatorBox" Grid.Row="1" Margin="0,0,0,10" Padding="4"/>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,0,0,10">
+            <Button x:Name="InstallButton" Content="Install / Update" Padding="14,6" Click="Install_Click"/>
+            <Button x:Name="LaunchButton" Content="▶ Launch game" Padding="14,6" Margin="8,0,0,0" Click="Launch_Click"/>
+        </StackPanel>
+
+        <ProgressBar x:Name="Progress" Grid.Row="3" Height="14" Maximum="100" Margin="0,0,0,10"/>
+
+        <TextBox x:Name="LogBox" Grid.Row="4" IsReadOnly="True" TextWrapping="Wrap"
+                 VerticalScrollBarVisibility="Auto" FontFamily="Consolas"/>
+    </Grid>
+</Window>

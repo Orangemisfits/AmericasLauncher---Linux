@@ -1,0 +1,10 @@
+[
+  {
+    "id": "xenia-canary",
+    "name": "Xenia Canary",
+    "repo": "xenia-canary/xenia-canary-releases",
+    "assetPattern": "^xenia.*\\.zip$",
+    "exe": "xenia_canary.exe",
+    "launchArgs": "\"{gamePath}\""
+  }
+]
