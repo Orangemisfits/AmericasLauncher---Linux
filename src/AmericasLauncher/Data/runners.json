@@ -28,9 +28,7 @@
     "exe": "target\\release\\xcl.exe",
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with XCL"
-  }
-]
-[  
+  },
   {
     "id": "VIctory-Belobug",
     "name": "VIctory(Belobug)",
@@ -60,9 +58,7 @@
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with VIctory(Belobug)"
-  }
-]
-[  
+  },
   {
     "id": "Zettrox",
     "name": "Zettrox",
@@ -92,9 +88,7 @@
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Vettrox"
-  }
-]
-[
+  },
   {
   "id": "hyphennn",
     "name": "Hyphennn(VIctory-Fork)",
@@ -124,9 +118,7 @@
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Hyphennn"
-  }
-]
-[  
+  },
   {
   "id": "Zettrox",
     "name": "Zettrox",
@@ -156,9 +148,7 @@
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameFolder}\"",
     "notes": "Launch Game with Vettrox"
-  }
-]
-[  
+  },
   {
   "id": "VIctory-origin",
     "name": "VIctory(Original)",
