@@ -175,6 +175,48 @@
             </Style.Triggers>
         </Style>
 
+        <!-- Pipeline Toggle Button -->
+        <Style x:Key="PipelineToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Background" Value="#232B3B"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="BorderBrush" Value="#3B4963"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Padding" Value="14,10"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Content" Value="Pipeline: OFF"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1E3A8A"/>
+                                <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                                <Setter Property="Content" Value="Pipeline: ON"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
+                                <Setter Property="Content" Value="Pipeline: N/A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Modern Dark TextBox -->
         <Style x:Key="ModernTextBox" TargetType="TextBox">
             <Setter Property="Background" Value="#141923"/>
@@ -467,6 +509,11 @@
                                     Content="▶  Launch Game"
                                     Margin="10,0,0,0"
                                     Click="Launch_Click"/>
+                            <ToggleButton x:Name="PipelineToggleButton"
+                                          Style="{StaticResource PipelineToggleStyle}"
+                                          Margin="10,0,0,0"
+                                          Checked="PipelineToggle_Changed"
+                                          Unchecked="PipelineToggle_Changed"/>
                         </StackPanel>
 
                         <TextBlock x:Name="VersionText"
@@ -493,24 +540,43 @@
                     </Grid>
 
                     <!-- Red Warning Banner when Game Folder / Exe is missing -->
-                    <Border x:Name="MissingPathsBanner"
-                            Grid.Row="2"
-                            Background="#450A0A"
-                            BorderBrush="#DC2626"
-                            BorderThickness="1"
-                            CornerRadius="8"
-                            Padding="14,10"
-                            Margin="0,0,0,12"
-                            Visibility="Collapsed">
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="⚠" FontSize="14" Foreground="#FCA5A5" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                            <TextBlock Text="Game Folder and Game Exe are not selected. Please select them in Settings."
-                                       FontSize="13"
-                                       FontWeight="SemiBold"
-                                       Foreground="#FCA5A5"
-                                       VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Border>
+                    <StackPanel Grid.Row="2" Margin="0,0,0,12">
+                        <Border x:Name="MissingPathsBanner"
+                                Background="#450A0A"
+                                BorderBrush="#DC2626"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,10"
+                                Margin="0,0,0,8"
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⚠" FontSize="14" Foreground="#FCA5A5" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Game Folder and Game Exe are not selected. Please select them in Settings."
+                                           FontSize="13"
+                                           FontWeight="SemiBold"
+                                           Foreground="#FCA5A5"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Pipeline Long Wait Warning Banner -->
+                        <Border x:Name="PipelineWarningBanner"
+                                Background="#3B2308"
+                                BorderBrush="#D97706"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,9"
+                                Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="⏳" FontSize="13" Foreground="#FCD34D" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Pipeline translation is ON — this will take a long time (several minutes on first run)."
+                                           FontSize="12.5"
+                                           FontWeight="SemiBold"
+                                           Foreground="#FCD34D"
+                                           VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
 
                     <!-- Progress Bar (Paint green bar) -->
                     <ProgressBar x:Name="Progress"

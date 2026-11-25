@@ -7,7 +7,7 @@ namespace AmericasLauncher.Services;
 
 public sealed class LaunchService
 {
-    public async Task<Process> Launch(RunnerProfile p, string gameFolder, string gameExe, Action<string> log)
+    public async Task<Process> Launch(RunnerProfile p, string gameFolder, string gameExe, Action<string> log, bool usePipeline = true)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -17,18 +17,17 @@ public sealed class LaunchService
         var workDir = Path.GetDirectoryName(exe)!;
 
         // 1) Ön hazırlık komutları varsa (ör. translate) sırayla çalıştır ve bitmesini bekle
-        if (p.PreLaunchArgs.Count > 0)
+        if (usePipeline && p.PreLaunchArgs.Count > 0)
         {
-            log("NOTE: Pipeline/shader translation is starting. This may take a long time (several minutes on the first run) — please wait...");
-        }
-
-        foreach (var rawArgs in p.PreLaunchArgs)
-        {
-            var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
-            log($"> {preArgs}");
-            var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log);
-            if (code != 0)
-                throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+            log("WARNING: Pipeline/shader translation is enabled. This will take a long time (several minutes on the first run) — please wait...");
+            foreach (var rawArgs in p.PreLaunchArgs)
+            {
+                var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
+                log($"> {preArgs}");
+                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log);
+                if (code != 0)
+                    throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+            }
         }
 
         // 2) Ön hazırlık bittikten sonra asıl oyunu başlat ve çıktıyı doğrudan launcher ekranına yönlendir

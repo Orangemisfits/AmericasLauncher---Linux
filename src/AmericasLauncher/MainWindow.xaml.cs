@@ -32,7 +32,9 @@ public partial class MainWindow : Window
         RunnerBox.SelectedItem = _profiles.FirstOrDefault(p => p.Id == _config.SelectedRunnerId) ?? _profiles.FirstOrDefault();
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
+        PipelineToggleButton.IsChecked = _config.UsePipeline;
         UpdateMissingPathsBanner();
+        UpdatePipelineState();
 
         // Attached after the initial selection so it does not fire during setup.
         RunnerBox.SelectionChanged += async (_, _) =>
@@ -42,6 +44,7 @@ public partial class MainWindow : Window
                 _config.SelectedRunnerId = profile.Id;
                 _configService.Save(_config);
             }
+            UpdatePipelineState();
             await RefreshVersionAsync();
         };
         Loaded += async (_, _) => await RefreshVersionAsync();
@@ -82,6 +85,23 @@ public partial class MainWindow : Window
         if (MissingPathsBanner == null) return;
         var missing = string.IsNullOrWhiteSpace(_config.GameFolder) || string.IsNullOrWhiteSpace(_config.GameExe);
         MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void UpdatePipelineState()
+    {
+        if (PipelineToggleButton == null || PipelineWarningBanner == null) return;
+        var supportsPipeline = Selected is { PreLaunchArgs.Count: > 0 };
+        PipelineToggleButton.IsEnabled = supportsPipeline;
+        var showWarning = supportsPipeline && PipelineToggleButton.IsChecked == true;
+        PipelineWarningBanner.Visibility = showWarning ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void PipelineToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        if (PipelineToggleButton == null) return;
+        _config.UsePipeline = PipelineToggleButton.IsChecked == true;
+        _configService.Save(_config);
+        UpdatePipelineState();
     }
 
     private async void Nav_Checked(object sender, RoutedEventArgs e)
@@ -318,7 +338,8 @@ public partial class MainWindow : Window
         SetBusy(true);
         try
         {
-            await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log);
+            var usePipeline = PipelineToggleButton.IsEnabled && PipelineToggleButton.IsChecked == true;
+            await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log, usePipeline);
             Log("Started.");
         }
         catch (Exception ex)
