@@ -27,6 +27,156 @@
     ],
     "exe": "target\\release\\xcl.exe",
     "launchArgs": "run \"{gameFolder}\"",
-    "notes": "XCL needs a D3D12 GPU with Shader Model 6.6 and mesh shaders. On Windows 10 you must also place the Microsoft D3D12 Agility SDK files as described in the XCL README. DXC 1.8 or newer is recommended (see the XCL README, XCL_DXC_DIR). Use only unpacked games you own."
+    "notes": "Launch Game with XCL"
+  }
+  {
+  "id": "VIctory-Belobug",
+    "name": "VIctory(Belobug)",
+    "gitUrl": "https://github.com/Belobug/VIctory-Belobug-AMD.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameFolder}\"",
+    "notes": "Launch Game with VIctory(Belobug)"
+  }
+  {
+  "id": "Zettrox",
+    "name": "Zettrox",
+    "gitUrl": "https://github.com/Zettrox/ztrx.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameFolder}\"",
+    "notes": "Launch Game with Vettrox"
+  }
+   {
+  "id": "hyphennn",
+    "name": "Hyphennn(VIctory-Fork)",
+    "gitUrl": "https://github.com/fxceless/victory-fork.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameFolder}\"",
+    "notes": "Launch Game with Hyphennn"
+  }
+  {
+  "id": "Zettrox",
+    "name": "Zettrox",
+    "gitUrl": "https://github.com/Zettrox/ztrx.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameFolder}\"",
+    "notes": "Launch Game with Vettrox"
+  }
+   {
+  "id": "VIctory-origin",
+    "name": "VIctory(Original)",
+    "gitUrl": "https://github.com/Marvisak/VIctory.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameFolder}\"",
+    "notes": "Launch Game with VIctory"
   }
 ]
