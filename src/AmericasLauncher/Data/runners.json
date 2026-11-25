@@ -26,7 +26,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\xcl.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with XCL"
   },
   {
@@ -56,7 +56,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with VIctory(Belobug)"
   },
   {
@@ -86,7 +86,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with Vettrox"
   },
   {
@@ -116,7 +116,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with Hyphennn"
   },
   {
@@ -146,7 +146,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with Vettrox"
   },
   {
@@ -176,7 +176,7 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameFolder}\"",
+    "launchArgs": "run \"{gameExe}\"",
     "notes": "Launch Game with VIctory"
   }
 ]
