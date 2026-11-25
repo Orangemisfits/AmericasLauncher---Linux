@@ -1,6 +1,6 @@
 # Americas Launcher
 
-A simple Windows launcher that sets up and starts [XCL](https://github.com/xcl-dev/xcl), a compatibility layer for running Xbox Series X|S (GDK) games on Windows, with a single click.
+A simple Windows launcher that sets up and starts, a compatibility layer for running Xbox Series X|S (GDK) games on Windows, with a single click.
 
 > This project is intended **only for games you legally own**, unpacked on your own PC. Americas Launcher does **not** include, download, or distribute games, keys, or console SDK files. It is not affiliated with the XCL project, which is developed separately under its own license.
 
