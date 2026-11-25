@@ -30,6 +30,8 @@ public sealed class RunnerProfile
     /// <summary>Path of the built executable, relative to the source folder.</summary>
     [JsonPropertyName("exe")] public string Exe { get; set; } = "";
 
+    [JsonPropertyName("preLaunchArgs")] public List<string> PreLaunchArgs { get; set; } = new();
+   
     /// <summary>Arguments for the built executable. Supports {gameFolder} and {gameExe}.</summary>
     [JsonPropertyName("launchArgs")] public string LaunchArgs { get; set; } = "";
 
