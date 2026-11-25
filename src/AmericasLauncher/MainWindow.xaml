@@ -930,7 +930,7 @@
                                 <Button x:Name="OpenReleaseButton"
                                         Grid.Column="2"
                                         Style="{StaticResource PatriotRedButton}"
-                                        Content="Open Release"
+                                        Content="Update Now"
                                         Visibility="Collapsed"
                                         Click="OpenRelease_Click"/>
                             </Grid>

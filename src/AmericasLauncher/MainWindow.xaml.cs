@@ -21,6 +21,7 @@ public partial class MainWindow : Window
     private readonly List<RunnerProfile> _profiles;
     private bool _portLoadedOnce;
     private string? _latestReleaseUrl;
+    private string? _latestDownloadUrl;
 
     public MainWindow()
     {
@@ -172,7 +173,10 @@ public partial class MainWindow : Window
                 : res.HasRelease ? Brushes.LimeGreen : Brushes.LightSlateGray;
 
             _latestReleaseUrl = res.ReleaseUrl;
-            OpenReleaseButton.Visibility = res.IsUpdateAvailable && !string.IsNullOrWhiteSpace(res.ReleaseUrl)
+            _latestDownloadUrl = res.DownloadUrl;
+            OpenReleaseButton.Content = !string.IsNullOrWhiteSpace(res.DownloadUrl) ? "Update Now" : "Open Release";
+            OpenReleaseButton.Visibility = res.IsUpdateAvailable &&
+                (!string.IsNullOrWhiteSpace(res.DownloadUrl) || !string.IsNullOrWhiteSpace(res.ReleaseUrl))
                 ? Visibility.Visible
                 : Visibility.Collapsed;
         }
@@ -187,8 +191,29 @@ public partial class MainWindow : Window
         }
     }
 
-    private void OpenRelease_Click(object sender, RoutedEventArgs e)
+    private async void OpenRelease_Click(object sender, RoutedEventArgs e)
     {
+        if (!string.IsNullOrWhiteSpace(_latestDownloadUrl))
+        {
+            CheckLauncherUpdateButton.IsEnabled = false;
+            OpenReleaseButton.IsEnabled = false;
+            try
+            {
+                await _launcherUpdates.DownloadAndApplyUpdateAsync(
+                    _latestDownloadUrl,
+                    msg => Dispatcher.Invoke(() => LauncherUpdateStatusText.Text = msg));
+                Application.Current.Shutdown();
+            }
+            catch (Exception ex)
+            {
+                LauncherUpdateStatusText.Text = "Update failed: " + ex.Message;
+                LauncherUpdateStatusText.Foreground = Brushes.IndianRed;
+                CheckLauncherUpdateButton.IsEnabled = true;
+                OpenReleaseButton.IsEnabled = true;
+            }
+            return;
+        }
+
         if (!string.IsNullOrWhiteSpace(_latestReleaseUrl))
             Process.Start(new ProcessStartInfo(_latestReleaseUrl) { UseShellExecute = true });
     }
