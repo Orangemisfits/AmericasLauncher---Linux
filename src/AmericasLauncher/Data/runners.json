@@ -98,9 +98,9 @@
     "notes": "Launch Game with Dexnom - VIctory Based"
   },
   {
-    "id": "Zettrox",
-    "name": "Zettrox - VIctory Based",
-    "gitUrl": "https://github.com/Zettrox/ztrx.git",
+    "id": "VItoriaBR",
+    "name": "VItoriaBR - VIctory Based",
+    "gitUrl": "https://github.com/uiliannn/VItoriaBr.git",
     "dependencies": [
       {
         "name": "Git",
@@ -128,7 +128,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Zettrox - VIctory Based"
+    "notes": "Launch Game with VItoriaBr - VIctory Based"
   },
   {
   "id": "VIctory-origin",
