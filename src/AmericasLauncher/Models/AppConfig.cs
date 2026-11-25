@@ -3,9 +3,10 @@ namespace AmericasLauncher.Models;
 
 public sealed class AppConfig
 {
-    public string GamePath { get; set; } = "";
-    public string SelectedEmulatorId { get; set; } = "xenia-canary";
+    public string GameFolder { get; set; } = "";
+    public string GameExe { get; set; } = "";
+    public string SelectedRunnerId { get; set; } = "xcl";
 
-    /// <summary>Emulator id -> installed release tag (e.g. "v1.2.3").</summary>
+    /// <summary>Runner id -> installed source revision (short git hash).</summary>
     public Dictionary<string, string> InstalledVersions { get; set; } = new();
 }

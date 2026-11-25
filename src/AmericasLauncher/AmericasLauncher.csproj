@@ -8,11 +8,11 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>AmericasLauncher</AssemblyName>
     <RootNamespace>AmericasLauncher</RootNamespace>
-    <Version>0.1.0</Version>
+    <Version>0.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include="Data\emulators.json">
+    <Content Include="Data\runners.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

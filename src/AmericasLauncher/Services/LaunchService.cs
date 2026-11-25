@@ -7,18 +7,22 @@ namespace AmericasLauncher.Services;
 
 public sealed class LaunchService
 {
-    public Process Launch(EmulatorProfile p, string gamePath)
+    public Process Launch(RunnerProfile p, string gameFolder, string gameExe)
     {
-        var dir = Paths.EmulatorDir(p.Id);
-        var exe = Path.Combine(dir, p.Exe);
-        if (!File.Exists(exe)) throw new FileNotFoundException("Emulator is not installed.", exe);
-        if (!File.Exists(gamePath)) throw new FileNotFoundException("Game file not found.", gamePath);
+        var exe = RunnerService.ExePath(p);
+        if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
+        if (!Directory.Exists(gameFolder)) throw new DirectoryNotFoundException("Game folder not found: " + gameFolder);
+        if (!File.Exists(gameExe)) throw new FileNotFoundException("Game exe not found.", gameExe);
+
+        var args = p.LaunchArgs
+            .Replace("{gameFolder}", gameFolder.TrimEnd('\\', '/'))
+            .Replace("{gameExe}", gameExe);
 
         var psi = new ProcessStartInfo
         {
             FileName = exe,
-            Arguments = p.LaunchArgs.Replace("{gamePath}", gamePath),
-            WorkingDirectory = dir,      // emulator folder, for portable settings
+            Arguments = args,
+            WorkingDirectory = Path.GetDirectoryName(exe)!,
             UseShellExecute = false
         };
         return Process.Start(psi) ?? throw new InvalidOperationException("Failed to start the process.");

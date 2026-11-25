@@ -11,7 +11,6 @@ public static class Paths
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AmericasLauncher");
 
     public static string ConfigFile => Path.Combine(Root, "config.json");
-    public static string EmulatorDir(string id) => Path.Combine(Root, "emulators", id);
 }
 
 public sealed class ConfigService
@@ -35,9 +34,9 @@ public sealed class ConfigService
         File.WriteAllText(Paths.ConfigFile, JsonSerializer.Serialize(config, Options));
     }
 
-    public static List<EmulatorProfile> LoadProfiles()
+    public static List<RunnerProfile> LoadProfiles()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "Data", "emulators.json");
-        return JsonSerializer.Deserialize<List<EmulatorProfile>>(File.ReadAllText(path)) ?? new();
+        var path = Path.Combine(AppContext.BaseDirectory, "Data", "runners.json");
+        return JsonSerializer.Deserialize<List<RunnerProfile>>(File.ReadAllText(path)) ?? new();
     }
 }
