@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
 using AmericasLauncher.Models;
 using AmericasLauncher.Services;
 using Microsoft.Win32;
@@ -25,6 +26,10 @@ public partial class MainWindow : Window
         RunnerBox.SelectedItem = _profiles.FirstOrDefault(p => p.Id == _config.SelectedRunnerId) ?? _profiles.FirstOrDefault();
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
+
+        // Attached after the initial selection so it does not fire during setup.
+        RunnerBox.SelectionChanged += async (_, _) => await RefreshVersionAsync();
+        Loaded += async (_, _) => await RefreshVersionAsync();
     }
 
     private RunnerProfile? Selected => RunnerBox.SelectedItem as RunnerProfile;
@@ -35,6 +40,62 @@ public partial class MainWindow : Window
         LogBox.AppendText(msg + Environment.NewLine);
         LogBox.ScrollToEnd();
     });
+
+    private int _refreshCounter;
+
+    private void SetStatus(string text, Brush color)
+    {
+        StatusText.Text = text;
+        StatusText.Foreground = color;
+    }
+
+    /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>
+    private async Task RefreshVersionAsync()
+    {
+        var ticket = ++_refreshCounter;   // ignore results if the selection changed meanwhile
+
+        if (Selected is not { } profile)
+        {
+            VersionText.Text = "Emulator version: -";
+            SetStatus("", Brushes.Gray);
+            return;
+        }
+
+        try
+        {
+            if (!_runners.IsInstalled(profile))
+            {
+                VersionText.Text = "Emulator version: not installed";
+                SetStatus("Not installed", Brushes.Gray);
+                return;
+            }
+
+            var version = await _runners.GetInstalledVersionAsync(profile);
+            if (ticket != _refreshCounter) return;
+            VersionText.Text = "Emulator version: " + (version == "" ? "unknown" : version);
+            SetStatus("Checking for updates...", Brushes.Gray);
+
+            var status = await _runners.CheckForUpdateAsync(profile);
+            if (ticket != _refreshCounter) return;
+
+            switch (status)
+            {
+                case UpdateStatus.UpToDate:
+                    SetStatus("Up to date", Brushes.ForestGreen);
+                    break;
+                case UpdateStatus.UpdateAvailable:
+                    SetStatus("New update available", Brushes.DarkOrange);
+                    break;
+                default:
+                    SetStatus("Could not check for updates", Brushes.Gray);
+                    break;
+            }
+        }
+        catch
+        {
+            if (ticket == _refreshCounter) SetStatus("Could not check for updates", Brushes.Gray);
+        }
+    }
 
     private void SetBusy(bool busy)
     {
@@ -94,6 +155,8 @@ public partial class MainWindow : Window
             {
                 Log("Setup did not finish. Check the messages above.");
             }
+
+            await RefreshVersionAsync();
         }
         catch (Exception ex)
         {

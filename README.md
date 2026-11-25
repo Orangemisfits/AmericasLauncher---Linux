@@ -11,6 +11,7 @@ A simple Windows launcher that sets up and starts [XCL](https://github.com/xcl-d
   - installs missing requirements with `winget` (Git, Visual Studio C++ Build Tools, Rust)
   - downloads the XCL source with `git` and keeps it up to date
   - builds XCL for you
+- Shows the installed version and tells you whether a new update is available
 - One-click game launch
 - Runners are defined in `Data/runners.json`, so adding another one requires no code changes
 

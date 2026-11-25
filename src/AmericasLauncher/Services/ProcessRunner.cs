@@ -23,6 +23,7 @@ public static class ProcessRunner
             CreateNoWindow = true
         };
         if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
+        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";   // never block waiting for git credentials
 
         using var process = new Process { StartInfo = psi };
         process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
@@ -31,7 +32,15 @@ public static class ProcessRunner
         process.Start();
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
-        await process.WaitForExitAsync(ct);
+        try
+        {
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* already exited */ }
+            throw;
+        }
         return process.ExitCode;
     }
 }

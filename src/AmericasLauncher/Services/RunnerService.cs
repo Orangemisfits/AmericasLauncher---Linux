@@ -4,6 +4,8 @@ using AmericasLauncher.Models;
 
 namespace AmericasLauncher.Services;
 
+public enum UpdateStatus { NotInstalled, UpToDate, UpdateAvailable, Unknown }
+
 /// <summary>Installs requirements, downloads the runner's source with git and builds it.</summary>
 public sealed class RunnerService
 {
@@ -13,6 +15,51 @@ public sealed class RunnerService
     public static string ExePath(RunnerProfile p) => Path.Combine(SourceDir(p), p.Exe);
 
     public bool IsInstalled(RunnerProfile p) => File.Exists(ExePath(p));
+
+    /// <summary>Short git revision of the installed source, or "" if unknown.</summary>
+    public async Task<string> GetInstalledVersionAsync(RunnerProfile p, CancellationToken ct = default)
+    {
+        var dir = SourceDir(p);
+        if (!Directory.Exists(Path.Combine(dir, ".git"))) return "";
+        try { return await GetHeadAsync(dir, ct); }
+        catch { return ""; }
+    }
+
+    /// <summary>Compares the installed revision with the remote default branch (needs internet).</summary>
+    public async Task<UpdateStatus> CheckForUpdateAsync(RunnerProfile p, CancellationToken ct = default)
+    {
+        if (!IsInstalled(p)) return UpdateStatus.NotInstalled;
+        try
+        {
+            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            cts.CancelAfter(TimeSpan.FromSeconds(20));
+
+            var local = await GetHeadAsync(SourceDir(p), cts.Token, full: true);
+            if (local == "") return UpdateStatus.Unknown;
+
+            var lines = new List<string>();
+            var code = await ProcessRunner.RunAsync(
+                "git", $"ls-remote \"{p.GitUrl}\" HEAD", null,
+                s => { lock (lines) lines.Add(s); }, cts.Token);
+            if (code != 0) return UpdateStatus.Unknown;
+
+            string remote;
+            lock (lines)
+            {
+                remote = lines.Select(l => l.Trim())
+                    .FirstOrDefault(l => l.Length >= 40 && l[..40].All(Uri.IsHexDigit))?[..40] ?? "";
+            }
+            if (remote == "") return UpdateStatus.Unknown;
+
+            return string.Equals(local, remote, StringComparison.OrdinalIgnoreCase)
+                ? UpdateStatus.UpToDate
+                : UpdateStatus.UpdateAvailable;
+        }
+        catch
+        {
+            return UpdateStatus.Unknown;   // offline, git missing, timeout ...
+        }
+    }
 
     /// <summary>Returns true when the runner is built and ready to launch.</summary>
     public async Task<bool> InstallOrUpdateAsync(
@@ -82,11 +129,11 @@ public sealed class RunnerService
         return true;
     }
 
-    private static async Task<string> GetHeadAsync(string dir, CancellationToken ct)
+    private static async Task<string> GetHeadAsync(string dir, CancellationToken ct, bool full = false)
     {
         var lines = new List<string>();
         var code = await ProcessRunner.RunAsync(
-            "git", "rev-parse --short HEAD", dir, s => { lock (lines) lines.Add(s); }, ct);
+            "git", full ? "rev-parse HEAD" : "rev-parse --short HEAD", dir, s => { lock (lines) lines.Add(s); }, ct);
 
         lock (lines) return code == 0 ? (lines.FirstOrDefault()?.Trim() ?? "") : "";
     }
