@@ -48,8 +48,12 @@ public sealed class RunnerService
 
     public static void DeleteDirectorySafe(string path)
     {
-        if (Directory.Exists(path))
-            Directory.Delete(path, recursive: true);
+        if (!Directory.Exists(path)) return;
+        foreach (var file in Directory.EnumerateFiles(path, "*", SearchOption.AllDirectories))
+        {
+            File.SetAttributes(file, FileAttributes.Normal);
+        }
+        Directory.Delete(path, recursive: true);
     }
 
     public bool IsInstalled(RunnerProfile p) => File.Exists(ExePath(p));
