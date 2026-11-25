@@ -16,7 +16,8 @@
     <Content Include="Data\runners.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Resource Include="assets\logo.jpg" />
+    <Resource Include="assets\logo.png" />
+    <Resource Include="assets\americas-logo.ico" />
   </ItemGroup>
 
 </Project>

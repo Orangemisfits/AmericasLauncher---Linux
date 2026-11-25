@@ -39,7 +39,18 @@ public partial class MainWindow : Window
             await RefreshVersionAsync();
         };
         Loaded += async (_, _) => await RefreshVersionAsync();
+        StateChanged += (_, _) =>
+        {
+            RootGrid.Margin = WindowState == WindowState.Maximized ? new Thickness(7) : new Thickness(0);
+        };
     }
+
+    private void Minimize_Click(object sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;
+
+    private void Maximize_Click(object sender, RoutedEventArgs e) =>
+        WindowState = WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+
+    private void Close_Click(object sender, RoutedEventArgs e) => Close();
 
     private RunnerProfile? Selected => RunnerBox.SelectedItem as RunnerProfile;
 
