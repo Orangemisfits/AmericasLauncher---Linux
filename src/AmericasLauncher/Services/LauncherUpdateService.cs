@@ -14,7 +14,7 @@ public sealed record LauncherUpdateResult(
 
 public sealed class LauncherUpdateService
 {
-    public const string CurrentVersionString = "0.5.1";
+    public const string CurrentVersionString = "1.0.1";
     private const string LatestReleaseApi = "https://api.github.com/repos/isaac-btw/AmericasLauncher/releases/latest";
 
     private static readonly HttpClient Http = CreateClient();
