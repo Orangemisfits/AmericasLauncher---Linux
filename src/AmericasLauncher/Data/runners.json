@@ -31,7 +31,7 @@
   },
   {
     "id": "VIctory-Belobug",
-    "name": "VIctory(Belobug)",
+    "name": "Belabug - VIctory Based",
     "gitUrl": "https://github.com/Belobug/VIctory-Belobug-AMD.git",
     "dependencies": [
       {
@@ -64,12 +64,12 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with VIctory(Belobug)"
+    "notes": "Launch Game with Belabug - VIctory Based"
   },
   {
-  "id": "hyphennn",
-    "name": "Hyphennn(VIctory-Fork)",
-    "gitUrl": "https://github.com/fxceless/victory-fork.git",
+    "id": "Dexnom",
+    "name": "Dexnom - VIctory Based",
+    "gitUrl": "https://github.com/DexNom/VIctory.git",
     "dependencies": [
       {
         "name": "Git",
@@ -90,18 +90,19 @@
     ],
     "buildCommands": [
       "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
-      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+      "powershell -ExecutionPolicy Bypass -File Initialize-FormatTables.ps1",
+      "cargo +stable-x86_64-pc-windows-msvc build --locked --release -p victory --features diagnostics --bins"
     ],
     "exe": "target\\release\\victory.exe",
     "preLaunchArgs": [
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Hyphennn"
+    "notes": "Launch Game with Dexnom - VIctory Based"
   },
   {
-  "id": "Zettrox",
-    "name": "Zettrox",
+    "id": "Zettrox",
+    "name": "Zettrox - VIctory Based",
     "gitUrl": "https://github.com/Zettrox/ztrx.git",
     "dependencies": [
       {
@@ -130,7 +131,7 @@
       "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Launch Game with Vettrox"
+    "notes": "Launch Game with Zettrox - VIctory Based"
   },
   {
   "id": "VIctory-origin",
