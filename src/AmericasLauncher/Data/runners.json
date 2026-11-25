@@ -57,10 +57,13 @@
       "copy victory.example.toml victory.toml",   
       "cargo test --workspace",                   
       "cargo run -p victory -- config", 
-      "cargo +stable-x86_64-pc-windows-msvc build --release -p victory"
+      "cargo build --release -p victory"
     ],
     "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\"",
+    "launchArgs": [
+      "translate --cache --pipelines {gameFolder}\shaders.rpf {gameFolder}\{gameExe} {gameFolder}XboxBvhBuilder.dll {gameFolder}\amd_fidelityfx_upscaler_xbox.dll",
+      "run \"{gameExe}\"" 
+    ],
     "notes": "Launch Game with VIctory(Belobug)"
   },
   {
