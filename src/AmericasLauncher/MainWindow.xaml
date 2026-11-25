@@ -1,7 +1,7 @@
 <Window x:Class="AmericasLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Americas Launcher - V1.5.1"
+        Title="Americas Launcher - V1.5.2"
         Icon="/assets/americas-logo.ico"
         Width="1280"
         Height="720"
@@ -425,7 +425,7 @@
                             </Hyperlink>
                         </TextBlock>
                         <TextBlock x:Name="SidebarVersionText"
-                                   Text="v1.5.1"
+                                   Text="v1.5.2"
                                    FontSize="12"
                                    Foreground="#64748B"
                                    HorizontalAlignment="Center"/>
@@ -1068,7 +1068,7 @@
                                            VerticalAlignment="Center"
                                            FontSize="13"
                                            Foreground="#CBD5E1"
-                                           Text="Current version: v1.5.1"
+                                           Text="Current version: v1.5.2"
                                            TextWrapping="Wrap"/>
                                 <Button x:Name="OpenReleaseButton"
                                         Grid.Column="3"
