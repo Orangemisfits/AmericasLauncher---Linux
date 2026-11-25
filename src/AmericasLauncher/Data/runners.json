@@ -53,11 +53,11 @@
     ],
     "buildCommands": [
       "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
-      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace",
       "cargo xtask install-hooks",               
       "copy victory.example.toml victory.toml",   
       "cargo test --workspace",                   
-      "cargo run -p victory -- config" 
+      "cargo run -p victory -- config", 
+      "cargo +stable-x86_64-pc-windows-msvc build --release -p victory"
     ],
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameExe}\"",
