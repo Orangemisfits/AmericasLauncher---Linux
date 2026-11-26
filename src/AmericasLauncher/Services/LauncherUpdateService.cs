@@ -138,7 +138,7 @@ public sealed class LauncherUpdateService
         onStatus("Extracting update...");
         ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
 
-        // If the zip wraps everything in a single subfolder, copy from inside it
+        // If the zip wraps everything in a single subfolder, unwrap it
         var sourceDir = extractDir;
         if (!File.Exists(Path.Combine(extractDir, "AmericasLauncher.exe")))
         {
@@ -147,23 +147,45 @@ public sealed class LauncherUpdateService
                 sourceDir = subDirs[0];
         }
 
-        var appDir = AppContext.BaseDirectory.TrimEnd('\\', '/');
-        var exePath = Environment.ProcessPath ?? Path.Combine(appDir, "AmericasLauncher.exe");
+        // Resolve the real install directory.
+        // Environment.ProcessPath is the actual .exe on disk (correct even for single-file publish).
+        // AppContext.BaseDirectory can point to a temp extraction folder for single-file apps.
+        var exeOnDisk = Environment.ProcessPath;
+        if (string.IsNullOrEmpty(exeOnDisk) || !File.Exists(exeOnDisk))
+            exeOnDisk = Path.Combine(AppContext.BaseDirectory, "AmericasLauncher.exe");
+
+        var appDir = Path.GetDirectoryName(exeOnDisk)!.TrimEnd('\\', '/');
         var pid = Environment.ProcessId;
         var scriptPath = Path.Combine(tempRoot, "apply.cmd");
 
+        // robocopy returns 0-7 for success (bit flags: 1=copied, 2=extra, 4=mismatched, 8=failed).
+        // We only care about exit codes >= 8 as actual errors.
+        // After copy, explicitly launch the NEW exe from the install dir.
         var script = $"""
 @echo off
+setlocal
+
 :wait
 tasklist /FI "PID eq {pid}" 2>NUL | find /I "{pid}" >NUL
 if "%ERRORLEVEL%"=="0" (
     timeout /t 1 /nobreak >NUL
     goto wait
 )
+
 timeout /t 1 /nobreak >NUL
-robocopy "{sourceDir}" "{appDir}" /E /IS /IT /R:5 /W:1 >NUL
-start "" "{exePath}"
-rmdir /S /Q "{tempRoot}"
+
+robocopy "{sourceDir}" "{appDir}" /E /IS /IT /R:5 /W:1
+set ROBO=%ERRORLEVEL%
+if %ROBO% GEQ 8 (
+    echo [ERROR] robocopy failed with exit code %ROBO%
+    pause
+    goto cleanup
+)
+
+start "" "{appDir}\AmericasLauncher.exe"
+
+:cleanup
+rmdir /S /Q "{tempRoot}" 2>NUL
 """;
         await File.WriteAllTextAsync(scriptPath, script, ct);
 
