@@ -228,5 +228,38 @@
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
     "notes": "Best with AMD"
+  },
+  {
+    "id": "nvidia",
+    "name": "Nvidia - VIctory Based",
+    "gitUrl": "https://github.com/trustno1-coder/VIctory-NVIDIA.git",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup show active-toolchain || rustup toolchain install",
+      "cargo build --locked --profile diag -p victory --features diagnostics"
+    ],
+    "exe": "target\\diag\\victory.exe",
+    "preLaunchArgs": [
+      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
+    ],
+    "launchArgs": "run \"{gameExe}\" --execute",
+    "notes": "Best with Nvidia"
   }
 ]

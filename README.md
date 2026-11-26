@@ -8,7 +8,7 @@ A modern Windows launcher that automatically sets up, updates, builds, and launc
 
 ## Features
 
-- **Modern 720p UI:** Clean dark navy & patriot-themed interface with custom window controls and 7 selectable runner cards.
+- **Modern 720p UI:** Clean dark navy & patriot-themed interface with custom window controls and 8 selectable runner cards.
 - **One-Click Install / Update:**
   - Automatically checks and installs missing dependencies via `winget` (Git, Visual Studio C++ Build Tools, Rust).
   - Clones and updates each runner's source repository with `git`, then compiles it locally.
@@ -21,7 +21,7 @@ A modern Windows launcher that automatically sets up, updates, builds, and launc
 
 ## Supported Runners
 
-Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/AmericasLauncher/Data/runners.json). Click any of the 7 runner cards on the **Launch** screen to switch between them. The "Best with" column is the hint shown on each card.
+Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/AmericasLauncher/Data/runners.json). Click any of the 8 runner cards on the **Launch** screen to switch between them. The "Best with" column is the hint shown on each card.
 
 | Runner | Based On | Best with | Repository |
 |---|---|---|---|
@@ -32,6 +32,7 @@ Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/America
 | **VIctory(Original)** | Original VIctory compatibility layer | Unknown | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 | **hyphenn - VIctory Based** | VIctory fork | Unknown | [fxceless/victory-fork](https://github.com/fxceless/victory-fork) |
 | **AvatarManz - VIctory Based** | VIctory fork | AMD | [avatarmanz/VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) |
+| **Nvidia - VIctory Based** | VIctory fork (based on AvatarManz) | Nvidia | [trustno1-coder/VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) |
 
 Runners are third-party projects that the launcher builds from source on your PC. Review a runner's code before you run it.
 
