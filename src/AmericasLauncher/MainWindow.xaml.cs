@@ -510,10 +510,13 @@ public partial class MainWindow : Window
             _config.InstalledVersions.Remove(profile.Id);
             _configService.Save(_config);
 
-            LoadLaunchOptionsEditor();   // the Launch Options list only offers installed runners
+            // Show it as not installed right away: card colour, its launch-options gear, and the Launch Options list.
+            SyncCardInstallState(profile, installed: false);
+            LoadLaunchOptionsEditor();
 
             await RefreshStorageAsync();
             await RefreshVersionAsync();
+            await CheckAllRunnersHealthAsync();   // also refreshes anything else that counts installed runners
         }
         catch (Exception ex)
         {
@@ -681,6 +684,22 @@ public partial class MainWindow : Window
 
     private void ToastClose_Click(object sender, RoutedEventArgs e) => CloseToast();
 
+    /// <summary>
+    /// Keeps a runner card in step with what is on disk after an install or delete (its colour and its
+    /// launch-options gear). Only the installed / not installed change is made: any other state the
+    /// startup health check set (an update, a broken repository) is left as it is.
+    /// </summary>
+    private void SyncCardInstallState(RunnerProfile profile, bool installed, bool updateAvailable = false)
+    {
+        var before = profile.HealthState;
+        if (!installed && before != RunnerHealthState.NotInstalled && before != RunnerHealthState.Broken)
+            profile.HealthState = RunnerHealthState.NotInstalled;
+        else if (installed && before == RunnerHealthState.NotInstalled)
+            profile.HealthState = updateAvailable ? RunnerHealthState.UpdateAvailable : RunnerHealthState.UpToDate;
+
+        if (profile.HealthState != before && Selected?.Id == profile.Id) UpdateRunnerLegendAndButtons(profile);
+    }
+
     /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>
     private async Task RefreshVersionAsync()
     {
@@ -699,6 +718,7 @@ public partial class MainWindow : Window
             {
                 VersionText.Text = "Emulator version: not installed";
                 SetStatus("Not installed", Brushes.LightSlateGray);
+                SyncCardInstallState(profile, installed: false);
                 return;
             }
 
@@ -709,6 +729,7 @@ public partial class MainWindow : Window
 
             var status = await _runners.CheckForUpdateAsync(profile);
             if (ticket != _refreshCounter) return;
+            SyncCardInstallState(profile, installed: true, updateAvailable: status == UpdateStatus.UpdateAvailable);
 
             switch (status)
             {
