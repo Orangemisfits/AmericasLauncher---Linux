@@ -232,7 +232,7 @@ public partial class MainWindow : Window
             RunnerService.CustomRunnersRoot = dlg.FolderName;
             _configService.Save(_config);
             UpdateCustomDirBoxes();
-            RefreshStorageStats();
+            RefreshStorage_Click(this, new RoutedEventArgs());
             _ = CheckAllRunnersHealthAsync();
             _ = RefreshVersionAsync();
         }
@@ -244,7 +244,7 @@ public partial class MainWindow : Window
         RunnerService.CustomRunnersRoot = "";
         _configService.Save(_config);
         UpdateCustomDirBoxes();
-        RefreshStorageStats();
+        RefreshStorage_Click(this, new RoutedEventArgs());
         _ = CheckAllRunnersHealthAsync();
         _ = RefreshVersionAsync();
     }
@@ -258,7 +258,7 @@ public partial class MainWindow : Window
             RunnerService.CustomCacheRoot = dlg.FolderName;
             _configService.Save(_config);
             UpdateCustomDirBoxes();
-            RefreshStorageStats();
+            RefreshStorage_Click(this, new RoutedEventArgs());
         }
     }
 
@@ -268,7 +268,7 @@ public partial class MainWindow : Window
         RunnerService.CustomCacheRoot = "";
         _configService.Save(_config);
         UpdateCustomDirBoxes();
-        RefreshStorageStats();
+        RefreshStorage_Click(this, new RoutedEventArgs());
     }
 
     private void CoolStart_Click(object sender, RoutedEventArgs e)
@@ -306,7 +306,7 @@ public partial class MainWindow : Window
             _configService.Save(_config);
 
             UpdateCustomDirBoxes();
-            RefreshStorageStats();
+            RefreshStorage_Click(this, new RoutedEventArgs());
             _ = CheckAllRunnersHealthAsync();
             _ = RefreshVersionAsync();
             MessageBox.Show("Cool Start complete. All runners and local files have been reset.", "Cool Start", MessageBoxButton.OK, MessageBoxImage.Information);
