@@ -763,8 +763,10 @@
                                         <ComboBox x:Name="ResolutionBox"
                                                   Grid.Column="1"
                                                   Style="{StaticResource ModernComboBox}"
-                                                  Height="28"
-                                                  FontSize="11.5"
+                                                  Height="40"
+                                                  FontSize="13"
+                                                  Padding="8,4"
+                                                  VerticalContentAlignment="Center"
                                                   SelectionChanged="ResolutionBox_SelectionChanged">
                                             <ComboBoxItem Content="540p"/>
                                             <ComboBoxItem Content="720p"/>
@@ -1378,7 +1380,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="Runners Folder" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                                            <TextBox x:Name="CustomRunnersDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="30" FontSize="12" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="CustomRunnersDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="44" FontSize="12.5" Padding="10,8" VerticalContentAlignment="Center" Margin="0,0,8,0"/>
                                             <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Browse..." Padding="10,4" Margin="0,0,6,0" Click="BrowseCustomRunnersDir_Click"/>
                                             <Button Grid.Column="3" Style="{StaticResource SecondaryButton}" Content="Reset" Padding="10,4" Click="ResetCustomRunnersDir_Click"/>
                                         </Grid>
@@ -1390,7 +1392,7 @@
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="Pipeline Cache" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
-                                            <TextBox x:Name="CustomCacheDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="30" FontSize="12" Margin="0,0,8,0"/>
+                                            <TextBox x:Name="CustomCacheDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="44" FontSize="12.5" Padding="10,8" VerticalContentAlignment="Center" Margin="0,0,8,0"/>
                                             <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Browse..." Padding="10,4" Margin="0,0,6,0" Click="BrowseCustomCacheDir_Click"/>
                                             <Button Grid.Column="3" Style="{StaticResource SecondaryButton}" Content="Reset" Padding="10,4" Click="ResetCustomCacheDir_Click"/>
                                         </Grid>

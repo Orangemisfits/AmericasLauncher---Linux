@@ -39,6 +39,14 @@ public sealed class LaunchService
         var env = LaunchOptionsService.ResolveEnv(options, RunnerService.SourceDir(p), gameFolder, gameExe, log);
         if (!env.ContainsKey("VICTORY_NO_WATCHDOG"))
             env["VICTORY_NO_WATCHDOG"] = "1";
+        if (string.Equals(p.Id, "klbf-lab", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!env.ContainsKey("VICTORY_SHADER_OPT")) env["VICTORY_SHADER_OPT"] = "0";
+            if (!env.ContainsKey("VICTORY_LATE_WAIT")) env["VICTORY_LATE_WAIT"] = "1";
+            if (!env.ContainsKey("VICTORY_WIDE_BACK")) env["VICTORY_WIDE_BACK"] = "1";
+            if (!env.ContainsKey("VICTORY_PIPELINE_WAIT_MS")) env["VICTORY_PIPELINE_WAIT_MS"] = "24";
+            if (!env.ContainsKey("VICTORY_RELAY_COPY_QUEUE")) env["VICTORY_RELAY_COPY_QUEUE"] = "0";
+        }
         if (!string.IsNullOrWhiteSpace(RunnerService.CustomCacheRoot) && !env.ContainsKey("VICTORY_CACHE_DIR"))
             env["VICTORY_CACHE_DIR"] = RunnerService.CustomCacheRoot;
         var resValue = resolution switch

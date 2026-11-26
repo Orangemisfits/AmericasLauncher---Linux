@@ -98,9 +98,9 @@
     "notes": "Best with Both"
   },
   {
-    "id": "VItoriaBR",
-    "name": "VItoriaBR - VIctory Based",
-    "gitUrl": "https://github.com/uiliannn/VItoriaBr.git",
+    "id": "klbf-lab",
+    "name": "KLBF-LAB",
+    "gitUrl": "https://github.com/PastiiJay/klbf-lab.git",
     "dependencies": [
       {
         "name": "Git",
@@ -125,10 +125,10 @@
     ],
     "exe": "target\\release\\victory.exe",
     "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
+      "translate --cache --pipelines --jobs 8 \"{gameFolder}\\shaders.rpf\""
     ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Both"
+    "notes": "Best with AMD"
   },
   {
   "id": "VIctory-origin",
