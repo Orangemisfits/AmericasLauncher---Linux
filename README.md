@@ -15,7 +15,11 @@ A modern Windows launcher that automatically sets up, updates, builds, and launc
   - Displays the installed commit hash and checks upstream for updates.
 - **Integrated Console Output:** Runner output and pre-launch shader/pipeline translation logs stream directly inside the launcher's log box — no separate CMD window pops up.
 - **Pre-Launch Pipeline Support:** Runs `preLaunchArgs` (such as `translate --pipelines`) sequentially before starting the game, with a clear notice when first-time translation may take several minutes.
+- **"Still working" status during the pipeline:** Some runners print nothing while they translate shaders. If the log stays silent for 15 seconds, the launcher writes a status line with the elapsed time, the runner exe's CPU usage (percent of the whole CPU, like Task Manager) and the size of the pipeline cache, for example `Still working... 02:30 elapsed, victory.exe CPU: 37%, cache size: 412 MB`. It cannot show a percentage, because only the runner knows how much work is left; runners that print their own progress (such as VIctory Original) are not interrupted.
 - **Stop Game at any time:** The Launch button turns into **Stop Game** as soon as you click it — also while the pipeline translation is still running. It cancels the translation, closes the game and any leftover runner process (such as `victory.exe`) still running in the background.
+- **Xbox Series X / S selector:** A button next to the pipeline toggle chooses the console per runner (VIctory forks: `--console series-x|series-s`; XCL: `XCL_DEVICE_TYPE`). Shows "N/A" for runners without the option.
+- **Game output in a log file:** The game's output is written to `%LocalAppData%\AmericasLauncher\logs\game.log` and shown in the log box in batches, so the launcher can never block the game.
+- **Update notice:** On startup the launcher checks for updates and shows "- New Update available" by the title and a yellow dot next to Settings.
 - **Settings & Self-Update Check:** Configure your Game Folder and Game Exe paths, and check GitHub Releases for newer versions of Americas Launcher. An optional **Auto Update** switch installs new versions on startup, and the release notes are shown for 15 seconds after an update.
 - **Live Port Status:** Built-in tracker powered by [Portwatch VI](https://portwatch-vi.xyz/).
 

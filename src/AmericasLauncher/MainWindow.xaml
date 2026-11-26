@@ -466,6 +466,14 @@
                                FontWeight="SemiBold"
                                Foreground="#E2E8F0"
                                VerticalAlignment="Center"/>
+                    <TextBlock x:Name="TitleUpdateText"
+                               Text="- New Update available"
+                               Visibility="Collapsed"
+                               Margin="8,0,0,0"
+                               FontSize="12.5"
+                               FontWeight="SemiBold"
+                               Foreground="#EAB308"
+                               VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal">
                     <Button Style="{StaticResource CaptionButtonStyle}" Click="Minimize_Click" ToolTip="Minimize">
@@ -577,6 +585,9 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="⚙" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                                <Ellipse x:Name="SettingsUpdateDot" Width="9" Height="9" Fill="#EAB308"
+                                         Margin="8,1,0,0" VerticalAlignment="Center" Visibility="Collapsed"
+                                         ToolTip="A new launcher update is available"/>
                             </StackPanel>
                         </RadioButton>
                     </StackPanel>
@@ -719,6 +730,11 @@
                                           Margin="10,0,0,0"
                                           Checked="PipelineToggle_Changed"
                                           Unchecked="PipelineToggle_Changed"/>
+                            <Button x:Name="ConsoleButton"
+                                    Style="{StaticResource PatriotBlueButton}"
+                                    Content="Xbox Series X"
+                                    Margin="10,0,0,0"
+                                    Click="Console_Click"/>
                         </StackPanel>
 
                         <TextBlock x:Name="VersionText"

@@ -69,6 +69,12 @@ public sealed class RunnerProfile : INotifyPropertyChanged
     /// <summary>Arguments for the built executable. Supports {gameFolder} and {gameExe}.</summary>
     [JsonPropertyName("launchArgs")] public string LaunchArgs { get; set; } = "";
 
+    /// <summary>True when the runner can choose between Xbox Series S and Series X (all VIctory forks and XCL).</summary>
+    [JsonIgnore] public bool SupportsConsole => UsesConsoleEnv || LaunchArgs.Contains("--execute");
+
+    /// <summary>XCL picks the console from the XCL_DEVICE_TYPE environment variable; VIctory forks use --console.</summary>
+    [JsonIgnore] public bool UsesConsoleEnv => string.Equals(Id, "xcl", StringComparison.OrdinalIgnoreCase);
+
     [JsonPropertyName("notes")] public string? Notes { get; set; }
 
     public override string ToString() => Name;

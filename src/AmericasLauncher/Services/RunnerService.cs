@@ -67,8 +67,48 @@ public sealed class RunnerService
     /// </summary>
     public static int KillRunnerProcesses(RunnerProfile p)
     {
-        var exePath = Path.GetFullPath(ExePath(p));
         var killed = 0;
+        foreach (var proc in FindRunnerProcesses(p))
+        {
+            try
+            {
+                proc.Kill(entireProcessTree: true);
+                killed++;
+            }
+            catch { /* the process already exited */ }
+            finally { proc.Dispose(); }
+        }
+
+        return killed;
+    }
+
+    /// <summary>
+    /// Total CPU time used so far by the running processes of this runner's own exe,
+    /// and how many such processes there are. Used to show how busy the runner is.
+    /// </summary>
+    public static (TimeSpan Cpu, int Count) GetRunnerCpuTime(RunnerProfile p)
+    {
+        var total = TimeSpan.Zero;
+        var count = 0;
+        foreach (var proc in FindRunnerProcesses(p))
+        {
+            try
+            {
+                total += proc.TotalProcessorTime;
+                count++;
+            }
+            catch { /* the process exited while we were reading it */ }
+            finally { proc.Dispose(); }
+        }
+
+        return (total, count);
+    }
+
+    /// <summary>Running processes that were started from this runner's own built exe. The caller disposes them.</summary>
+    private static List<Process> FindRunnerProcesses(RunnerProfile p)
+    {
+        var exePath = Path.GetFullPath(ExePath(p));
+        var found = new List<Process>();
 
         foreach (var proc in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exePath)))
         {
@@ -77,15 +117,16 @@ public sealed class RunnerService
                 var path = proc.MainModule?.FileName;
                 if (path != null && string.Equals(Path.GetFullPath(path), exePath, StringComparison.OrdinalIgnoreCase))
                 {
-                    proc.Kill(entireProcessTree: true);
-                    killed++;
+                    found.Add(proc);
+                    continue;
                 }
             }
             catch { /* access denied, or the process already exited */ }
-            finally { proc.Dispose(); }
+
+            proc.Dispose();
         }
 
-        return killed;
+        return found;
     }
 
     /// <summary>Short git revision of the installed source, or "" if unknown.</summary>

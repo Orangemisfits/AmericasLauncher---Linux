@@ -16,7 +16,7 @@ public sealed class LaunchService
     public async Task<Process> Launch(
         RunnerProfile p, string gameFolder, string gameExe, Action<string> log,
         bool usePipeline = true, Action? onExited = null, CancellationToken ct = default,
-        RunnerLaunchOptions? options = null)
+        RunnerLaunchOptions? options = null, bool seriesS = false)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -38,43 +38,96 @@ public sealed class LaunchService
         if (usePipeline && p.PreLaunchArgs.Count > 0)
         {
             log("WARNING: Pipeline/shader translation is enabled. This will take a long time (several minutes on the first run) — please wait...");
-            foreach (var rawArgs in p.PreLaunchArgs)
+
+            // Some runners print nothing while they translate. If the log stays silent for a while,
+            // the heartbeat below shows that it is still working (elapsed time, victory.exe CPU, cache size).
+            var lastOutputTicks = DateTime.UtcNow.Ticks;
+            void TrackedLog(string line)
             {
+<<<<<<< HEAD
                 ct.ThrowIfCancellationRequested();
                 var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
                 log($"> {preArgs}");
                 var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log, ct, env);
                 if (code != 0)
                     throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+=======
+                Interlocked.Exchange(ref lastOutputTicks, DateTime.UtcNow.Ticks);
+                log(line);
+            }
+
+            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var heartbeat = HeartbeatAsync(
+                p, log, () => new DateTime(Interlocked.Read(ref lastOutputTicks), DateTimeKind.Utc),
+                DateTime.UtcNow, heartbeatCts.Token);
+            try
+            {
+                foreach (var rawArgs in p.PreLaunchArgs)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
+                    log($"> {preArgs}");
+                    var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, TrackedLog, ct);
+                    if (code != 0)
+                        throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+                }
+            }
+            finally
+            {
+                heartbeatCts.Cancel();
+                await heartbeat;   // never throws, see HeartbeatAsync
+>>>>>>> main
             }
         }
 
-        // 2) Start the game itself and stream its output into the launcher's log box.
+        // 2) Start the game itself.
+        // The game's output goes straight into a log file (cmd redirects it), NOT through a pipe owned by the launcher.
+        // With a pipe, a slow reader (the launcher's UI) fills the small pipe buffer and the game's logging threads
+        // block inside victory.exe. A file never blocks the game, and the game also survives the launcher closing.
         ct.ThrowIfCancellationRequested();
+<<<<<<< HEAD
         var args = FormatArgs(LaunchOptionsService.ComposeArgs(p.LaunchArgs, options), gameFolder, gameExe);
+=======
+        var args = FormatArgs(p.LaunchArgs, gameFolder, gameExe);
+        var envConsole = p.UsesConsoleEnv ? (seriesS ? "lockhart" : "anaconda") : null;
+        if (p.SupportsConsole && !p.UsesConsoleEnv)
+            args += seriesS ? " --console series-s" : " --console series-x";
+        if (p.SupportsConsole)
+            log($"Console: {(seriesS ? "Xbox Series S" : "Xbox Series X")}");
+>>>>>>> main
         log($"> {args}");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(GameLogPath)!);
+        try { File.WriteAllText(GameLogPath, ""); } catch { /* the old log is still locked: append to it */ }
+
         var psi = new ProcessStartInfo
         {
-            FileName = exe,
-            Arguments = args,
+            FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
+            Arguments = "/d /c \"\"%AL_EXE%\" %AL_ARGS% >>\"%AL_LOG%\" 2>&1\"",
             WorkingDirectory = workDir,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
             UseShellExecute = false,
             CreateNoWindow = true
         };
+<<<<<<< HEAD
         LaunchOptionsService.Apply(psi.Environment, env);
+=======
+        psi.Environment["AL_EXE"] = exe;
+        psi.Environment["AL_ARGS"] = args;
+        psi.Environment["AL_LOG"] = GameLogPath;
+        if (envConsole != null) psi.Environment["XCL_DEVICE_TYPE"] = envConsole;
+>>>>>>> main
 
-        var process = new Process
-        {
-            StartInfo = psi,
-            EnableRaisingEvents = true
-        };
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
+        var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
+        var tailDone = new CancellationTokenSource();
+        Task? tail = null;
         process.Exited += (_, _) =>
         {
-            try { log($"Process exited with code {process.ExitCode}."); }
+            try
+            {
+                tailDone.Cancel();
+                tail?.Wait(2000);
+                log($"Process exited with code {process.ExitCode}.");
+            }
             catch { /* ignore if window already closed */ }
 
             try { onExited?.Invoke(); }
@@ -87,9 +140,85 @@ public sealed class LaunchService
             throw new InvalidOperationException("Failed to start the process.");
         }
 
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
+        tail = Task.Run(() => TailAsync(GameLogPath, log, tailDone.Token));
         return process;
+    }
+
+    public static string GameLogPath => Path.Combine(Paths.Root, "logs", "game.log");
+
+    /// <summary>Follows the game's log file and passes new lines to <paramref name="log"/>. Drains what is left when cancelled.</summary>
+    private static async Task TailAsync(string path, Action<string> log, CancellationToken stop)
+    {
+        try
+        {
+            using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(fs);
+            while (true)
+            {
+                var line = await reader.ReadLineAsync();
+                if (line != null) { log(line); continue; }
+                if (stop.IsCancellationRequested) break;
+                try { await Task.Delay(250, stop); } catch (OperationCanceledException) { }
+            }
+        }
+        catch { /* the log is only a convenience; never affect the game */ }
+    }
+
+    private static readonly TimeSpan HeartbeatEvery = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// While the runner is silent for <see cref="HeartbeatEvery"/>, writes a status line with the elapsed time,
+    /// the runner exe's CPU usage (percent of the whole CPU, like Task Manager) and the pipeline cache size.
+    /// Runners that print their own progress (e.g. VIctory Original) keep it quiet because they are never silent that long.
+    /// Never throws; it ends when <paramref name="ct"/> is cancelled.
+    /// </summary>
+    private static async Task HeartbeatAsync(
+        RunnerProfile p, Action<string> log, Func<DateTime> lastOutput, DateTime started, CancellationToken ct)
+    {
+        try
+        {
+            var name = Path.GetFileName(p.Exe);
+            var cores = Environment.ProcessorCount;
+            var lastBeat = DateTime.UtcNow;
+            var (prevCpu, _) = RunnerService.GetRunnerCpuTime(p);
+            var prevAt = lastBeat;
+
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), ct);
+
+                var now = DateTime.UtcNow;
+                var quietSince = lastOutput() > lastBeat ? lastOutput() : lastBeat;
+                if (now - quietSince < HeartbeatEvery) continue;
+
+                var (cpu, count) = RunnerService.GetRunnerCpuTime(p);
+                var wall = (now - prevAt).TotalSeconds;
+                var cpuText = "n/a";
+                if (count > 0 && wall > 0)
+                {
+                    var used = Math.Max(0, (cpu - prevCpu).TotalSeconds);
+                    cpuText = $"{Math.Clamp(used / (wall * cores) * 100, 0, 100):0}%";
+                }
+                prevCpu = cpu;
+                prevAt = now;
+
+                var cacheDir = RunnerService.PipelineCacheDir;
+                var cacheText = await Task.Run(
+                    () => Directory.Exists(cacheDir)
+                        ? ", cache size: " + RunnerService.FormatBytes(RunnerService.GetDirectorySize(cacheDir))
+                        : "",
+                    ct);
+
+                var elapsed = now - started;
+                var time = elapsed.ToString(elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"mm\:ss");
+                log($"Still working... {time} elapsed, {name} CPU: {cpuText}{cacheText}");
+                lastBeat = now;
+            }
+        }
+        catch
+        {
+            // Cancelled, or the window is closing: the heartbeat is only a convenience.
+        }
     }
 
     private static string FormatArgs(string template, string gameFolder, string gameExe) =>
