@@ -60,6 +60,8 @@ public partial class MainWindow : Window
         GameExeBox.Text = _config.GameExe;
         AutoUpdateToggle.IsChecked = _config.AutoUpdate;
         AutoUpdateToggle.Content = _config.AutoUpdate ? "Auto Update: ON" : "Auto Update: OFF";
+        ReviewBeforeBuildToggle.IsChecked = _config.ReviewBeforeBuild;
+        ApplyReviewBeforeBuild();
         UpdateMissingPathsBanner();
         UpdatePipelineState();
         UpdateConsoleState();
@@ -859,6 +861,30 @@ public partial class MainWindow : Window
         _configService.Save(_config);
     }
 
+    private void ReviewBeforeBuild_Changed(object sender, RoutedEventArgs e)
+    {
+        var enabled = ReviewBeforeBuildToggle.IsChecked == true;
+        if (_config.ReviewBeforeBuild == enabled) return;   // set at startup
+        _config.ReviewBeforeBuild = enabled;
+        _configService.Save(_config);
+        ApplyReviewBeforeBuild();
+        _ = RefreshVersionAsync();
+    }
+
+    /// <summary>
+    /// Off: one "Install / Update" button (download and build). On: "Update Source" (download only)
+    /// and "Build" (build the downloaded source only), so new runner code can be checked in between.
+    /// </summary>
+    private void ApplyReviewBeforeBuild()
+    {
+        var review = _config.ReviewBeforeBuild;
+        ReviewBeforeBuildToggle.Content = review ? "Review Before Build: ON" : "Review Before Build: OFF";
+        UpdateSourceButton.Visibility = review ? Visibility.Visible : Visibility.Collapsed;
+        InstallButton.Content = review ? "⚙  Build" : "Install / Update";
+        InstallButton.ToolTip = review ? "Build the source that is already downloaded. The source is not updated." : null;
+        UpdateRunnerLegendAndButtons(Selected);
+    }
+
     private void ShowReleaseNoteToast(string version, string notes)
     {
         ToastVersionText.Text = $"Updated to {version}";
@@ -918,23 +944,41 @@ public partial class MainWindow : Window
         {
             if (!_runners.IsInstalled(profile))
             {
-                VersionText.Text = "Emulator version: not installed";
-                SetStatus("Not installed", Brushes.LightSlateGray);
+                var source = await _runners.GetSourceVersionAsync(profile);
+                if (ticket != _refreshCounter) return;
+                if (source != "")
+                {
+                    VersionText.Text = $"Source: {source} · not built yet";
+                    SetStatus("Downloaded, not built", Brushes.Orange);
+                }
+                else
+                {
+                    VersionText.Text = "Emulator version: not installed";
+                    SetStatus("Not installed", Brushes.LightSlateGray);
+                }
                 SyncCardInstallState(profile, installed: false);
                 return;
             }
 
             var version = await _runners.GetInstalledVersionAsync(profile);
             if (ticket != _refreshCounter) return;
-            VersionText.Text = "Emulator version: " + (version == "" ? "unknown" : version);
+            var built = BuiltVersion(profile);
+            var needsBuild = built != null && version != "" && !string.Equals(built, version, StringComparison.OrdinalIgnoreCase);
+            VersionText.Text = needsBuild
+                ? $"Source: {version} · built: {built}"
+                : "Emulator version: " + (version == "" ? "unknown" : version);
             SetStatus("Checking for updates...", Brushes.LightSlateGray);
 
             var status = await _runners.CheckForUpdateAsync(profile);
             if (ticket != _refreshCounter) return;
-            SyncCardInstallState(profile, installed: true, updateAvailable: status == UpdateStatus.UpdateAvailable);
+            SyncCardInstallState(profile, installed: true,
+                updateAvailable: status == UpdateStatus.UpdateAvailable || needsBuild);
 
             switch (status)
             {
+                case UpdateStatus.UpToDate when needsBuild:
+                    SetStatus("Source newer than build", Brushes.Orange);
+                    break;
                 case UpdateStatus.UpToDate:
                     SetStatus("Up to date", Brushes.LimeGreen);
                     break;
@@ -952,9 +996,14 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>The short revision this runner was last built from, or null if the launcher does not know.</summary>
+    private string? BuiltVersion(RunnerProfile profile) =>
+        _config.InstalledVersions.TryGetValue(profile.Id, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
+
     private void SetBusy(bool busy)
     {
         var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
+        UpdateSourceButton.IsEnabled = !busy && !isBroken;
         InstallButton.IsEnabled = !busy && !isBroken;
         LaunchButton.IsEnabled = !busy;
         RunnerBox.IsEnabled = !busy;
@@ -967,6 +1016,7 @@ public partial class MainWindow : Window
         var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
         LaunchButton.Content = active ? "■  Stop Game" : "▶  Launch Game";
         LaunchButton.IsEnabled = true;   // while active this is the Stop button, so it must stay clickable
+        UpdateSourceButton.IsEnabled = !active && !isBroken;
         InstallButton.IsEnabled = !active && !isBroken;
         RunnerBox.IsEnabled = !active;
         Progress.IsIndeterminate = active;
@@ -1015,6 +1065,13 @@ public partial class MainWindow : Window
         var tasks = _profiles.Select(async p =>
         {
             var state = await _runners.CheckHealthAsync(p);
+            // Source already updated but not built yet: show it like an update (yellow).
+            if (state == RunnerHealthState.UpToDate && BuiltVersion(p) is { } built)
+            {
+                var source = await _runners.GetSourceVersionAsync(p);
+                if (source != "" && !string.Equals(source, built, StringComparison.OrdinalIgnoreCase))
+                    state = RunnerHealthState.UpdateAvailable;
+            }
             Dispatcher.Invoke(() =>
             {
                 p.HealthState = state;
@@ -1030,19 +1087,25 @@ public partial class MainWindow : Window
         if (profile == null)
         {
             RunnerColorLegendText.Text = "Please select a runner";
+            UpdateSourceButton.IsEnabled = false;
             InstallButton.IsEnabled = false;
             return;
         }
 
+        var review = _config.ReviewBeforeBuild;
         RunnerColorLegendText.Text = profile.HealthState switch
         {
             RunnerHealthState.UpToDate => "Green: Runner is installed and up to date.",
             RunnerHealthState.Broken => "Red: Runner repository was deleted or is no longer working.",
-            RunnerHealthState.UpdateAvailable => "Yellow: Runner is installed, but an update is available.",
-            _ => "Black: Runner is not installed yet."
+            RunnerHealthState.UpdateAvailable => review
+                ? "Yellow: New source upstream (Update Source), or downloaded but not built yet (Build)."
+                : "Yellow: Runner is installed, but an update is available.",
+            _ => review ? "Black: Runner is not built yet." : "Black: Runner is not installed yet."
         };
 
-        InstallButton.IsEnabled = profile.HealthState != RunnerHealthState.Broken && !Progress.IsIndeterminate;
+        var enabled = profile.HealthState != RunnerHealthState.Broken && !Progress.IsIndeterminate;
+        UpdateSourceButton.IsEnabled = enabled;
+        InstallButton.IsEnabled = enabled;
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -1079,13 +1142,40 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void UpdateSource_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } profile) return;
+        SetBusy(true);
+        try
+        {
+            var ok = await _runners.UpdateSourceAsync(profile, Log);
+            _config.SelectedRunnerId = profile.Id;
+            _configService.Save(_config);
+            if (!ok) Log("Source update did not finish. Check the messages above.");
+
+            await RefreshVersionAsync();
+            await CheckAllRunnersHealthAsync();
+        }
+        catch (Exception ex)
+        {
+            Log("ERROR: " + ex.Message);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
+    /// <summary>"Install / Update" (download and build), or "Build" (build only) with Review Before Build on.</summary>
     private async void Install_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } profile) return;
         SetBusy(true);
         try
         {
-            var ok = await _runners.InstallOrUpdateAsync(profile, _config, Log);
+            var ok = _config.ReviewBeforeBuild
+                ? await _runners.BuildAsync(profile, _config, Log)
+                : await _runners.InstallOrUpdateAsync(profile, _config, Log);
             _config.SelectedRunnerId = profile.Id;
             _configService.Save(_config);
 
@@ -1123,7 +1213,11 @@ public partial class MainWindow : Window
         if (Selected is not { } profile) return;
         FlushLaunchOptionsSave();
 
-        if (!_runners.IsInstalled(profile)) { Log("Click 'Install / Update' first."); return; }
+        if (!_runners.IsInstalled(profile))
+        {
+            Log(_config.ReviewBeforeBuild ? "Click 'Update Source', then 'Build' first." : "Click 'Install / Update' first.");
+            return;
+        }
         if (string.IsNullOrWhiteSpace(_config.GameFolder) || string.IsNullOrWhiteSpace(_config.GameExe))
         {
             UpdateMissingPathsBanner();

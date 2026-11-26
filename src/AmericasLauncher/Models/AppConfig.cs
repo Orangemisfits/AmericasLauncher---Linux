@@ -8,6 +8,12 @@ public sealed class AppConfig
     public string SelectedRunnerId { get; set; } = "xcl";
     public bool UsePipeline { get; set; } = true;
     public bool AutoUpdate { get; set; } = false;
+
+    /// <summary>
+    /// Off (default): one "Install / Update" button downloads and builds a runner.
+    /// On: "Update Source" only downloads and "Build" only builds, so new runner code can be checked in between.
+    /// </summary>
+    public bool ReviewBeforeBuild { get; set; } = false;
     public string? PendingUpdateNotes { get; set; }
     public string? PendingUpdateVersion { get; set; }
     public string CustomRunnersDir { get; set; } = "";

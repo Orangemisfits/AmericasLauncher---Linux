@@ -32,7 +32,7 @@ public sealed class LaunchService
                 await AgilityService.EnsureRuntimeAsync(exe, log, ct);
             else
                 log("WARNING: Windows 10 and this runner was built without the D3D12 Agility SDK: it will likely fail " +
-                    "with \"the device supports SM 0x65 only\". Press Install / Update to build it again.");
+                    "with \"the device supports SM 0x65 only\". Press Install / Update (or Build) to build it again.");
         }
 
         // The user's launch settings for this runner (Settings > Launch Options), for every process below.

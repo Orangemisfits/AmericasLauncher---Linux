@@ -220,27 +220,40 @@ public sealed class RunnerService
         }
     }
 
-    /// <summary>Returns true when the runner is built and ready to launch.</summary>
-    public async Task<bool> InstallOrUpdateAsync(
-        RunnerProfile p, AppConfig config, Action<string> log, CancellationToken ct = default)
+    public static bool HasSource(RunnerProfile p) => Directory.Exists(Path.Combine(SourceDir(p), ".git"));
+
+    /// <summary>Short git revision of the downloaded source, or "" if there is none.</summary>
+    public async Task<string> GetSourceVersionAsync(RunnerProfile p, CancellationToken ct = default)
     {
-        // 1) Requirements (git, build tools, rust ...)
-        log($"=== {p.Name}: checking requirements ===");
-        foreach (var dependency in p.Dependencies)
+        if (!HasSource(p)) return "";
+        try { return await GetHeadAsync(SourceDir(p), ct); }
+        catch { return ""; }
+    }
+
+    /// <summary>
+    /// Downloads or updates the runner's source with git only. Nothing from the runner is built or run,
+    /// so the new code can be reviewed before <see cref="BuildAsync"/> is clicked.
+    /// Returns true when the source is there and current.
+    /// </summary>
+    public async Task<bool> UpdateSourceAsync(
+        RunnerProfile p, Action<string> log, bool reviewStep = true, CancellationToken ct = default)
+    {
+        // With Review Before Build off this is only the first half of Install / Update: say nothing about reviewing.
+        var notBuilt = reviewStep ? " Nothing was built." : "";
+        // Only git is needed here; the build tools are installed by BuildAsync.
+        log($"=== {p.Name}: checking git ===");
+        foreach (var dependency in p.Dependencies.Where(d =>
+                     string.Equals(d.Check, "command:git", StringComparison.OrdinalIgnoreCase)))
         {
             if (!await _dependencies.EnsureAsync(dependency, log, ct)) return false;
         }
-        // Rust needs the MSVC linker AND the Windows SDK libraries; Build Tools installed by hand often lack the SDK.
-        if (p.Dependencies.Any(d => d.Check == "vsbuildtools") && !await DependencyService.EnsureWindowsSdkAsync(log, ct))
-            return false;
 
-        // 2) Source code
         var dir = SourceDir(p);
         var before = "";
-        if (Directory.Exists(Path.Combine(dir, ".git")))
+        if (HasSource(p))
         {
-            before = await GetHeadAsync(dir, ct);
-            log("=== Updating source ===");
+            before = await GetHeadAsync(dir, ct, full: true);
+            log(reviewStep ? "=== Updating source (download only, nothing is built) ===" : "=== Updating source ===");
             // Fetch then reset hard so diverging/rebased upstream branches never block the update.
             // Runner source dirs are never modified by the launcher, so discarding local state is safe.
             if (await ProcessRunner.RunAsync("git", "fetch --prune origin", dir, log, ct) != 0)
@@ -259,7 +272,7 @@ public sealed class RunnerService
         }
         else
         {
-            log("=== Downloading source ===");
+            log(reviewStep ? "=== Downloading source (nothing is built) ===" : "=== Downloading source ===");
             if (Directory.Exists(dir)) Directory.Delete(dir, recursive: true);   // leftover from a failed clone
             Directory.CreateDirectory(Path.GetDirectoryName(dir)!);
             if (await ProcessRunner.RunAsync("git", $"clone --depth 1 \"{p.GitUrl}\" \"{dir}\"", null, log, ct) != 0)
@@ -269,14 +282,75 @@ public sealed class RunnerService
             }
         }
 
+        var after = await GetHeadAsync(dir, ct, full: true);
+        var shortAfter = after.Length > 7 ? after[..7] : after;
+        if (before == "")
+        {
+            log($"[ok] Source downloaded ({shortAfter}).{notBuilt}");
+        }
+        else if (string.Equals(before, after, StringComparison.OrdinalIgnoreCase))
+        {
+            log($"[ok] Source is already up to date ({shortAfter}). Nothing new was downloaded.");
+            return true;
+        }
+        else
+        {
+            var shortBefore = before.Length > 7 ? before[..7] : before;
+            log($"[ok] Source updated {shortBefore} -> {shortAfter}.{notBuilt} New commits:");
+            var commits = await ProcessRunner.RunAndCaptureAsync(
+                "git", $"log --oneline --no-decorate -n 30 {before}..{after}", dir, ct);
+            foreach (var line in commits.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                log("    " + line.TrimEnd());
+            var stat = await ProcessRunner.RunAndCaptureAsync("git", $"diff --shortstat {before} {after}", dir, ct);
+            if (!string.IsNullOrWhiteSpace(stat)) log("   " + stat.Trim());
+        }
+
+        if (reviewStep) log($"Review the source in {dir}, then click 'Build'.");
+        return true;
+    }
+
+    /// <summary>
+    /// "Install / Update" (Review Before Build off): downloads or updates the source, then builds it.
+    /// Returns true when the runner is built and ready to launch.
+    /// </summary>
+    public async Task<bool> InstallOrUpdateAsync(
+        RunnerProfile p, AppConfig config, Action<string> log, CancellationToken ct = default) =>
+        await UpdateSourceAsync(p, log, reviewStep: false, ct) && await BuildAsync(p, config, log, ct);
+
+    /// <summary>
+    /// Builds the source that is already on disk. The runner's source is not updated here
+    /// (use <see cref="UpdateSourceAsync"/>), so only code that could be reviewed beforehand is built.
+    /// Returns true when the runner is built and ready to launch.
+    /// </summary>
+    public async Task<bool> BuildAsync(
+        RunnerProfile p, AppConfig config, Action<string> log, CancellationToken ct = default)
+    {
+        if (!HasSource(p))
+        {
+            log($"[!!] {p.Name} has no source yet. Click 'Update Source' first.");
+            return false;
+        }
+
+        // 1) Requirements (git, build tools, rust ...)
+        log($"=== {p.Name}: checking requirements ===");
+        foreach (var dependency in p.Dependencies)
+        {
+            if (!await _dependencies.EnsureAsync(dependency, log, ct)) return false;
+        }
+        // Rust needs the MSVC linker AND the Windows SDK libraries; Build Tools installed by hand often lack the SDK.
+        if (p.Dependencies.Any(d => d.Check == "vsbuildtools") && !await DependencyService.EnsureWindowsSdkAsync(log, ct))
+            return false;
+
+        var dir = SourceDir(p);
         var after = await GetHeadAsync(dir, ct);
         // Windows 10: a runner built before the launcher added the Agility SDK exports is built
         // again, though its source did not change (AgilityService).
         var missingWindows10Support = AgilityService.Needed && IsInstalled(p) && !AgilityService.HasExports(ExePath(p));
-        if (before != "" && before == after && IsInstalled(p) && !missingWindows10Support)
+        if (IsInstalled(p) && !missingWindows10Support &&
+            config.InstalledVersions.TryGetValue(p.Id, out var built) &&
+            string.Equals(built, after, StringComparison.OrdinalIgnoreCase))
         {
-            log($"Already up to date ({after}).");
-            config.InstalledVersions[p.Id] = after;
+            log($"Already built from this source ({after}).");
             // (A failed download is said in the log; the launch tries again.)
             await AgilityService.EnsureRuntimeAsync(ExePath(p), log, ct);
             return true;
@@ -284,8 +358,8 @@ public sealed class RunnerService
         if (missingWindows10Support)
             log("Windows 10: this runner was built without the D3D12 Agility SDK; building it again.");
 
-        // 3) Build
-        log("=== Building (this can take several minutes) ===");
+        // 2) Build
+        log($"=== Building {after} from the local source (this can take several minutes) ===");
         var buildEnv = await AgilityService.BuildEnvironmentAsync(log, ct);
         var vcvars = await DependencyService.FindVcvars64Async(ct) ?? FindVcvars64();
         if (vcvars == null) log("[!!] vcvars64.bat was not found; the build may fail to find link.exe.");
@@ -312,7 +386,7 @@ public sealed class RunnerService
                 log($"[!!] Command failed with exit code {code}.");
                 if (code == 1181 || !DependencyService.HasWindowsSdk())
                     log("[!!] LNK1181 means the linker cannot find a system library. Install \"Windows 11 SDK\" (or Windows 10 SDK) " +
-                        "with the Visual Studio Installer (Modify on Build Tools), then run Install / Update again.");
+                        "with the Visual Studio Installer (Modify on Build Tools), then run Install / Update (or Build) again.");
                 return false;
             }
         }
