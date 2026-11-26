@@ -780,7 +780,7 @@
                         </Grid>
                     </Grid>
 
-                    <!-- Action Bar: Install/Update, Launch Game, Version, Status -->
+                    <!-- Action Bar: Update Source (download only), Build (local source only), Launch Game, Version, Status -->
                     <Grid Grid.Row="1" Margin="0,0,0,12">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -789,6 +789,14 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" Orientation="Horizontal">
+                            <!-- Shown only with "Review Before Build" on (Settings) -->
+                            <Button x:Name="UpdateSourceButton"
+                                    Style="{StaticResource PatriotBlueButton}"
+                                    Content="↻  Update Source"
+                                    Margin="0,0,10,0"
+                                    Visibility="Collapsed"
+                                    ToolTip="Download or update the runner's source with git. Nothing is built or run."
+                                    Click="UpdateSource_Click"/>
                             <Button x:Name="InstallButton"
                                     Style="{StaticResource PatriotBlueButton}"
                                     Content="Install / Update"
@@ -1480,6 +1488,35 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
                             </StackPanel>
+                        </Border>
+
+                        <!-- Runner Builds: optional review step between downloading and building a runner -->
+                        <Border Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Padding="20"
+                                Margin="0,0,0,16">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <ToggleButton x:Name="ReviewBeforeBuildToggle"
+                                              Grid.Column="0"
+                                              Style="{StaticResource PipelineToggleStyle}"
+                                              Content="Review Before Build: OFF"
+                                              IsChecked="False"
+                                              Checked="ReviewBeforeBuild_Changed"
+                                              Unchecked="ReviewBeforeBuild_Changed"/>
+                                <TextBlock Grid.Column="1"
+                                           Margin="16,0,0,0"
+                                           VerticalAlignment="Center"
+                                           FontSize="12.5"
+                                           Foreground="#94A3B8"
+                                           TextWrapping="Wrap"
+                                           Text="Splits Install / Update into Update Source (downloads the runner with git, builds and runs nothing) and Build (builds the downloaded source without updating it), so a runner's new code can be checked before it is built."/>
+                            </Grid>
                         </Border>
 
                         <!-- Launcher Updates Card -->
