@@ -28,14 +28,36 @@ public sealed class LaunchService
         if (usePipeline && p.PreLaunchArgs.Count > 0)
         {
             log("WARNING: Pipeline/shader translation is enabled. This will take a long time (several minutes on the first run) — please wait...");
-            foreach (var rawArgs in p.PreLaunchArgs)
+
+            // Some runners print nothing while they translate. If the log stays silent for a while,
+            // the heartbeat below shows that it is still working (elapsed time, victory.exe CPU, cache size).
+            var lastOutputTicks = DateTime.UtcNow.Ticks;
+            void TrackedLog(string line)
             {
-                ct.ThrowIfCancellationRequested();
-                var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
-                log($"> {preArgs}");
-                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log, ct);
-                if (code != 0)
-                    throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+                Interlocked.Exchange(ref lastOutputTicks, DateTime.UtcNow.Ticks);
+                log(line);
+            }
+
+            using var heartbeatCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var heartbeat = HeartbeatAsync(
+                p, log, () => new DateTime(Interlocked.Read(ref lastOutputTicks), DateTimeKind.Utc),
+                DateTime.UtcNow, heartbeatCts.Token);
+            try
+            {
+                foreach (var rawArgs in p.PreLaunchArgs)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
+                    log($"> {preArgs}");
+                    var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, TrackedLog, ct);
+                    if (code != 0)
+                        throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+                }
+            }
+            finally
+            {
+                heartbeatCts.Cancel();
+                await heartbeat;   // never throws, see HeartbeatAsync
             }
         }
 
@@ -79,6 +101,63 @@ public sealed class LaunchService
         process.BeginOutputReadLine();
         process.BeginErrorReadLine();
         return process;
+    }
+
+    private static readonly TimeSpan HeartbeatEvery = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// While the runner is silent for <see cref="HeartbeatEvery"/>, writes a status line with the elapsed time,
+    /// the runner exe's CPU usage (percent of the whole CPU, like Task Manager) and the pipeline cache size.
+    /// Runners that print their own progress (e.g. VIctory Original) keep it quiet because they are never silent that long.
+    /// Never throws; it ends when <paramref name="ct"/> is cancelled.
+    /// </summary>
+    private static async Task HeartbeatAsync(
+        RunnerProfile p, Action<string> log, Func<DateTime> lastOutput, DateTime started, CancellationToken ct)
+    {
+        try
+        {
+            var name = Path.GetFileName(p.Exe);
+            var cores = Environment.ProcessorCount;
+            var lastBeat = DateTime.UtcNow;
+            var (prevCpu, _) = RunnerService.GetRunnerCpuTime(p);
+            var prevAt = lastBeat;
+
+            while (!ct.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(1), ct);
+
+                var now = DateTime.UtcNow;
+                var quietSince = lastOutput() > lastBeat ? lastOutput() : lastBeat;
+                if (now - quietSince < HeartbeatEvery) continue;
+
+                var (cpu, count) = RunnerService.GetRunnerCpuTime(p);
+                var wall = (now - prevAt).TotalSeconds;
+                var cpuText = "n/a";
+                if (count > 0 && wall > 0)
+                {
+                    var used = Math.Max(0, (cpu - prevCpu).TotalSeconds);
+                    cpuText = $"{Math.Clamp(used / (wall * cores) * 100, 0, 100):0}%";
+                }
+                prevCpu = cpu;
+                prevAt = now;
+
+                var cacheDir = RunnerService.PipelineCacheDir;
+                var cacheText = await Task.Run(
+                    () => Directory.Exists(cacheDir)
+                        ? ", cache size: " + RunnerService.FormatBytes(RunnerService.GetDirectorySize(cacheDir))
+                        : "",
+                    ct);
+
+                var elapsed = now - started;
+                var time = elapsed.ToString(elapsed.TotalHours >= 1 ? @"h\:mm\:ss" : @"mm\:ss");
+                log($"Still working... {time} elapsed, {name} CPU: {cpuText}{cacheText}");
+                lastBeat = now;
+            }
+        }
+        catch
+        {
+            // Cancelled, or the window is closing: the heartbeat is only a convenience.
+        }
     }
 
     private static string FormatArgs(string template, string gameFolder, string gameExe) =>
