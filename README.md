@@ -4,8 +4,6 @@ A modern Windows launcher that automatically sets up, updates, builds, and launc
 
 > This project is intended **only for games you legally own**, unpacked on your own PC. Americas Launcher does **not** include, download, or distribute games, keys, or console SDK files..
 
-> See [`src/AmericasLauncher/Services/AgilityService.cs`](src/AmericasLauncher/Services/AgilityService.cs).
-
 ![Americas Launcher - Launch View](docs/images/launch-view.png)
 
 ## Features
