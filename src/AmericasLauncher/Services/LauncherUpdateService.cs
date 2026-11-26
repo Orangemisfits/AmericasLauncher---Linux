@@ -138,6 +138,15 @@ public sealed class LauncherUpdateService
         onStatus("Extracting update...");
         ZipFile.ExtractToDirectory(zipPath, extractDir, overwriteFiles: true);
 
+        // If the zip wraps everything in a single subfolder, copy from inside it
+        var sourceDir = extractDir;
+        if (!File.Exists(Path.Combine(extractDir, "AmericasLauncher.exe")))
+        {
+            var subDirs = Directory.GetDirectories(extractDir);
+            if (subDirs.Length == 1 && File.Exists(Path.Combine(subDirs[0], "AmericasLauncher.exe")))
+                sourceDir = subDirs[0];
+        }
+
         var appDir = AppContext.BaseDirectory.TrimEnd('\\', '/');
         var exePath = Environment.ProcessPath ?? Path.Combine(appDir, "AmericasLauncher.exe");
         var pid = Environment.ProcessId;
@@ -151,7 +160,8 @@ if "%ERRORLEVEL%"=="0" (
     timeout /t 1 /nobreak >NUL
     goto wait
 )
-xcopy /E /Y /I "{extractDir}\*" "{appDir}\" >NUL
+timeout /t 1 /nobreak >NUL
+robocopy "{sourceDir}" "{appDir}" /E /IS /IT /R:5 /W:1 >NUL
 start "" "{exePath}"
 rmdir /S /Q "{tempRoot}"
 """;
