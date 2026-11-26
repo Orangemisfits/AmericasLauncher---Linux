@@ -238,9 +238,19 @@ public sealed class RunnerService
         {
             before = await GetHeadAsync(dir, ct);
             log("=== Updating source ===");
-            if (await ProcessRunner.RunAsync("git", "pull --ff-only", dir, log, ct) != 0)
+            // Fetch then reset hard so diverging/rebased upstream branches never block the update.
+            // Runner source dirs are never modified by the launcher, so discarding local state is safe.
+            if (await ProcessRunner.RunAsync("git", "fetch --prune origin", dir, log, ct) != 0)
             {
-                log("[!!] git pull failed.");
+                log("[!!] git fetch failed.");
+                return false;
+            }
+            // Determine the upstream tracking branch (e.g. origin/main or origin/master)
+            var trackResult = await ProcessRunner.RunAndCaptureAsync("git", "rev-parse --abbrev-ref --symbolic-full-name @{u}", dir, ct);
+            var upstream = string.IsNullOrWhiteSpace(trackResult) ? "origin/HEAD" : trackResult.Trim();
+            if (await ProcessRunner.RunAsync("git", $"reset --hard {upstream}", dir, log, ct) != 0)
+            {
+                log("[!!] git reset failed.");
                 return false;
             }
         }
