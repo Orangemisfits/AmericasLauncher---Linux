@@ -11,6 +11,9 @@ public sealed class AppConfig
     public string? PendingUpdateNotes { get; set; }
     public string? PendingUpdateVersion { get; set; }
 
+    /// <summary>Runner id -> true when Xbox Series S is chosen (default is Series X).</summary>
+    public Dictionary<string, bool> SeriesS { get; set; } = new();
+
     /// <summary>Runner id -> installed source revision (short git hash).</summary>
     public Dictionary<string, string> InstalledVersions { get; set; } = new();
 }

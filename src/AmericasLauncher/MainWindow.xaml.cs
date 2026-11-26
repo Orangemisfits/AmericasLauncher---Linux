@@ -41,7 +41,7 @@ public partial class MainWindow : Window
 
         // The version always comes from the assembly (csproj / release tag), never from hard-coded text.
         var version = LauncherUpdateService.CurrentVersionString;
-        Title = $"Americas Launcher - V{version}";
+        Title = "Americas Launcher";
         TitleBarText.Text = Title;
         SidebarVersionText.Text = $"v{version}";
         LauncherUpdateStatusText.Text = $"Current version: v{version}";
@@ -58,6 +58,8 @@ public partial class MainWindow : Window
         AutoUpdateToggle.Content = _config.AutoUpdate ? "Auto Update: ON" : "Auto Update: OFF";
         UpdateMissingPathsBanner();
         UpdatePipelineState();
+        UpdateConsoleState();
+        EnsureLogTimer();
 
         if (!string.IsNullOrWhiteSpace(_config.PendingUpdateNotes))
         {
@@ -67,10 +69,7 @@ public partial class MainWindow : Window
             _configService.Save(_config);
         }
 
-        if (_config.AutoUpdate)
-        {
-            Loaded += async (_, _) => await AutoCheckUpdateAsync();
-        }
+        Loaded += async (_, _) => await AutoCheckUpdateAsync();
 
         Loaded += async (_, _) => await CheckAllRunnersHealthAsync();
         UpdateRunnerLegendAndButtons(Selected);
@@ -84,6 +83,7 @@ public partial class MainWindow : Window
                 _configService.Save(_config);
             }
             UpdatePipelineState();
+            UpdateConsoleState();
             UpdateRunnerLegendAndButtons(Selected);
             await RefreshVersionAsync();
         };
@@ -106,11 +106,41 @@ public partial class MainWindow : Window
     private RunnerProfile? Selected => RunnerBox.SelectedItem as RunnerProfile;
 
     // Safe to call from any thread.
-    private void Log(string msg) => Dispatcher.Invoke(() =>
+    // Messages are queued and written to the box in batches on a timer, so a chatty process can never
+    // block on the UI thread, and the box stays small enough to remain fast.
+    private readonly System.Collections.Concurrent.ConcurrentQueue<string> _logQueue = new();
+    private System.Windows.Threading.DispatcherTimer? _logTimer;
+    private const int MaxLogChars = 200_000;
+
+    private void Log(string msg)
     {
-        LogBox.AppendText(msg + Environment.NewLine);
+        _logQueue.Enqueue(msg);
+        if (_logTimer == null) Dispatcher.BeginInvoke(new Action(EnsureLogTimer));
+    }
+
+    private void EnsureLogTimer()
+    {
+        if (_logTimer != null) return;
+        _logTimer = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _logTimer.Tick += (_, _) => FlushLog();
+        _logTimer.Start();
+    }
+
+    private void FlushLog()
+    {
+        if (_logQueue.IsEmpty) return;
+        var sb = new System.Text.StringBuilder();
+        var n = 0;
+        while (n < 2000 && _logQueue.TryDequeue(out var line)) { sb.AppendLine(line); n++; }
+        LogBox.AppendText(sb.ToString());
+        if (LogBox.Text.Length > MaxLogChars)
+        {
+            var text = LogBox.Text;
+            var cut = text.IndexOf('\n', text.Length - MaxLogChars / 2);
+            LogBox.Text = cut >= 0 ? text[(cut + 1)..] : text[^(MaxLogChars / 2)..];
+        }
         LogBox.ScrollToEnd();
-    });
+    }
 
     private int _refreshCounter;
 
@@ -142,6 +172,34 @@ public partial class MainWindow : Window
         _config.UsePipeline = PipelineToggleButton.IsChecked == true;
         _configService.Save(_config);
         UpdatePipelineState();
+    }
+
+    private bool SeriesSSelected => Selected != null && _config.SeriesS.TryGetValue(Selected.Id, out var s) && s;
+
+    private void UpdateConsoleState()
+    {
+        if (ConsoleButton == null) return;
+        var supported = Selected is { SupportsConsole: true };
+        ConsoleButton.IsEnabled = supported;
+        ConsoleButton.Content = !supported ? "Console: N/A" : SeriesSSelected ? "Xbox Series S" : "Xbox Series X";
+        ConsoleButton.ToolTip = supported
+            ? "Click to switch between Xbox Series X and Xbox Series S for this runner."
+            : "This runner has no console selection.";
+    }
+
+    private void Console_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { SupportsConsole: true } profile) return;
+        _config.SeriesS[profile.Id] = !SeriesSSelected;
+        _configService.Save(_config);
+        UpdateConsoleState();
+    }
+
+    private void SetUpdateIndicator(bool available)
+    {
+        var v = available ? Visibility.Visible : Visibility.Collapsed;
+        TitleUpdateText.Visibility = v;
+        SettingsUpdateDot.Visibility = v;
     }
 
     private async void Nav_Checked(object sender, RoutedEventArgs e)
@@ -272,6 +330,7 @@ public partial class MainWindow : Window
         try
         {
             var res = await _launcherUpdates.CheckForUpdateAsync();
+            SetUpdateIndicator(res.IsUpdateAvailable);
             LauncherUpdateStatusText.Text = res.Message;
             LauncherUpdateStatusText.Foreground = res.IsUpdateAvailable
                 ? Brushes.Orange
@@ -334,7 +393,9 @@ public partial class MainWindow : Window
         try
         {
             var res = await _launcherUpdates.CheckForUpdateAsync();
-            if (res.IsUpdateAvailable && !string.IsNullOrWhiteSpace(res.DownloadUrl))
+            SetUpdateIndicator(res.IsUpdateAvailable);
+            if (res.IsUpdateAvailable) { _latestReleaseUrl = res.ReleaseUrl; _latestDownloadUrl = res.DownloadUrl; _latestVersion = res.LatestVersion; _latestReleaseNotes = res.ReleaseNotes; }
+            if (_config.AutoUpdate && res.IsUpdateAvailable && !string.IsNullOrWhiteSpace(res.DownloadUrl))
             {
                 _config.PendingUpdateNotes = res.ReleaseNotes;
                 _config.PendingUpdateVersion = res.LatestVersion;
@@ -633,7 +694,8 @@ public partial class MainWindow : Window
                     try { Dispatcher.Invoke(() => EndLaunch(cts)); }
                     catch { /* the window is closing */ }
                 },
-                ct: cts.Token);
+                ct: cts.Token,
+                seriesS: SeriesSSelected);
 
             // Stop was clicked just as the game process was being started: close it right away.
             if (!ReferenceEquals(_launchCts, cts))
