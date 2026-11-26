@@ -44,14 +44,6 @@ public sealed class LaunchService
             var lastOutputTicks = DateTime.UtcNow.Ticks;
             void TrackedLog(string line)
             {
-<<<<<<< HEAD
-                ct.ThrowIfCancellationRequested();
-                var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
-                log($"> {preArgs}");
-                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log, ct, env);
-                if (code != 0)
-                    throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
-=======
                 Interlocked.Exchange(ref lastOutputTicks, DateTime.UtcNow.Ticks);
                 log(line);
             }
@@ -67,7 +59,7 @@ public sealed class LaunchService
                     ct.ThrowIfCancellationRequested();
                     var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
                     log($"> {preArgs}");
-                    var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, TrackedLog, ct);
+                    var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, TrackedLog, ct, env);
                     if (code != 0)
                         throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
                 }
@@ -76,7 +68,6 @@ public sealed class LaunchService
             {
                 heartbeatCts.Cancel();
                 await heartbeat;   // never throws, see HeartbeatAsync
->>>>>>> main
             }
         }
 
@@ -85,16 +76,12 @@ public sealed class LaunchService
         // With a pipe, a slow reader (the launcher's UI) fills the small pipe buffer and the game's logging threads
         // block inside victory.exe. A file never blocks the game, and the game also survives the launcher closing.
         ct.ThrowIfCancellationRequested();
-<<<<<<< HEAD
         var args = FormatArgs(LaunchOptionsService.ComposeArgs(p.LaunchArgs, options), gameFolder, gameExe);
-=======
-        var args = FormatArgs(p.LaunchArgs, gameFolder, gameExe);
         var envConsole = p.UsesConsoleEnv ? (seriesS ? "lockhart" : "anaconda") : null;
         if (p.SupportsConsole && !p.UsesConsoleEnv)
             args += seriesS ? " --console series-s" : " --console series-x";
         if (p.SupportsConsole)
             log($"Console: {(seriesS ? "Xbox Series S" : "Xbox Series X")}");
->>>>>>> main
         log($"> {args}");
 
         Directory.CreateDirectory(Path.GetDirectoryName(GameLogPath)!);
@@ -108,14 +95,11 @@ public sealed class LaunchService
             UseShellExecute = false,
             CreateNoWindow = true
         };
-<<<<<<< HEAD
         LaunchOptionsService.Apply(psi.Environment, env);
-=======
         psi.Environment["AL_EXE"] = exe;
         psi.Environment["AL_ARGS"] = args;
         psi.Environment["AL_LOG"] = GameLogPath;
         if (envConsole != null) psi.Environment["XCL_DEVICE_TYPE"] = envConsole;
->>>>>>> main
 
         var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         var tailDone = new CancellationTokenSource();
