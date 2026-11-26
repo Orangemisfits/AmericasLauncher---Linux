@@ -7,7 +7,15 @@ namespace AmericasLauncher.Services;
 
 public sealed class LaunchService
 {
-    public async Task<Process> Launch(RunnerProfile p, string gameFolder, string gameExe, Action<string> log, bool usePipeline = true)
+    /// <summary>
+    /// Runs the optional pre-launch commands (pipeline / shader translation) and then starts the game.
+    /// Cancelling <paramref name="ct"/> stops a running pre-launch command (and its child processes)
+    /// and throws <see cref="OperationCanceledException"/>.
+    /// <paramref name="onExited"/> is called (possibly from a background thread) when the game process exits.
+    /// </summary>
+    public async Task<Process> Launch(
+        RunnerProfile p, string gameFolder, string gameExe, Action<string> log,
+        bool usePipeline = true, Action? onExited = null, CancellationToken ct = default)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -16,21 +24,23 @@ public sealed class LaunchService
 
         var workDir = Path.GetDirectoryName(exe)!;
 
-        // 1) Ön hazırlık komutları varsa (ör. translate) sırayla çalıştır ve bitmesini bekle
+        // 1) Run the pre-launch commands (e.g. translate) one by one and wait for each to finish.
         if (usePipeline && p.PreLaunchArgs.Count > 0)
         {
             log("WARNING: Pipeline/shader translation is enabled. This will take a long time (several minutes on the first run) — please wait...");
             foreach (var rawArgs in p.PreLaunchArgs)
             {
+                ct.ThrowIfCancellationRequested();
                 var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
                 log($"> {preArgs}");
-                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log);
+                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log, ct);
                 if (code != 0)
                     throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
             }
         }
 
-        // 2) Ön hazırlık bittikten sonra asıl oyunu başlat ve çıktıyı doğrudan launcher ekranına yönlendir
+        // 2) Start the game itself and stream its output into the launcher's log box.
+        ct.ThrowIfCancellationRequested();
         var args = FormatArgs(p.LaunchArgs, gameFolder, gameExe);
         log($"> {args}");
         var psi = new ProcessStartInfo
@@ -55,7 +65,9 @@ public sealed class LaunchService
         {
             try { log($"Process exited with code {process.ExitCode}."); }
             catch { /* ignore if window already closed */ }
-            finally { process.Dispose(); }
+
+            try { onExited?.Invoke(); }
+            catch { /* ignore if window already closed */ }
         };
 
         if (!process.Start())

@@ -25,13 +25,27 @@ public partial class MainWindow : Window
     private string? _latestDownloadUrl;
     private string? _latestVersion;
     private string? _latestReleaseNotes;
+    private const int ToastSeconds = 15;
+
     private DispatcherTimer? _toastTimer;
     private int _toastCountdown;
     private Process? _runningProcess;
 
+    // Non-null from the moment Launch is clicked (pipeline included) until the game has exited or was stopped.
+    private CancellationTokenSource? _launchCts;
+    private RunnerProfile? _launchProfile;
+
     public MainWindow()
     {
         InitializeComponent();
+
+        // The version always comes from the assembly (csproj / release tag), never from hard-coded text.
+        var version = LauncherUpdateService.CurrentVersionString;
+        Title = $"Americas Launcher - V{version}";
+        TitleBarText.Text = Title;
+        SidebarVersionText.Text = $"v{version}";
+        LauncherUpdateStatusText.Text = $"Current version: v{version}";
+
         _config = _configService.Load();
         _profiles = ConfigService.LoadProfiles();
 
@@ -348,8 +362,8 @@ public partial class MainWindow : Window
         ToastVersionText.Text = $"Updated to {version}";
         ToastNotesText.Text = notes;
         ReleaseNoteToast.Visibility = Visibility.Visible;
-        _toastCountdown = 5;
-        ToastCountdownText.Text = "Closes in 5s";
+        _toastCountdown = ToastSeconds;
+        ToastCountdownText.Text = $"Closes in {ToastSeconds}s";
         _toastTimer?.Stop();
         _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _toastTimer.Tick += (_, _) =>
@@ -422,9 +436,58 @@ public partial class MainWindow : Window
     {
         var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
         InstallButton.IsEnabled = !busy && !isBroken;
-        LaunchButton.IsEnabled = !busy || (_runningProcess != null && !_runningProcess.HasExited);
+        LaunchButton.IsEnabled = !busy;
         RunnerBox.IsEnabled = !busy;
         Progress.IsIndeterminate = busy;
+    }
+
+    /// <summary>Switches the Launch button between "Launch Game" and "Stop Game" and locks the rest of the UI.</summary>
+    private void SetLaunchUi(bool active)
+    {
+        var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
+        LaunchButton.Content = active ? "■  Stop Game" : "▶  Launch Game";
+        LaunchButton.IsEnabled = true;   // while active this is the Stop button, so it must stay clickable
+        InstallButton.IsEnabled = !active && !isBroken;
+        RunnerBox.IsEnabled = !active;
+        Progress.IsIndeterminate = active;
+    }
+
+    private void EndLaunch(CancellationTokenSource cts)
+    {
+        if (!ReferenceEquals(_launchCts, cts)) return;   // already ended
+        _launchCts = null;
+        _launchProfile = null;
+        _runningProcess = null;
+        cts.Dispose();
+        SetLaunchUi(false);
+    }
+
+    /// <summary>
+    /// Works at any time after Launch was clicked: during pipeline translation as well as while the game runs.
+    /// Cancels the pipeline, stops the game and any leftover process of the runner's exe (e.g. victory.exe).
+    /// </summary>
+    private void StopGame()
+    {
+        var cts = _launchCts;
+        var profile = _launchProfile;
+        if (cts == null) return;
+
+        Log("Stopping...");
+        LaunchButton.IsEnabled = false;   // prevent double clicks until the launch has fully ended
+
+        try { cts.Cancel(); } catch (ObjectDisposedException) { }
+
+        try { _runningProcess?.Kill(entireProcessTree: true); }
+        catch { /* already exited */ }
+
+        if (profile != null)
+        {
+            var killed = RunnerService.KillRunnerProcesses(profile);
+            if (killed > 0) Log($"Closed {killed} background {profile.Name} process(es).");
+        }
+
+        Log("Stopped.");
+        EndLaunch(cts);
     }
 
     private async Task CheckAllRunnersHealthAsync()
@@ -530,17 +593,10 @@ public partial class MainWindow : Window
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
-        if (_runningProcess != null && !_runningProcess.HasExited)
+        // The button is "Stop Game" from the first moment of the launch (pipeline included).
+        if (_launchCts != null)
         {
-            try
-            {
-                _runningProcess.Kill(entireProcessTree: true);
-                Log("Game stopped.");
-            }
-            catch (Exception ex)
-            {
-                Log("ERROR stopping game: " + ex.Message);
-            }
+            StopGame();
             return;
         }
 
@@ -562,28 +618,42 @@ public partial class MainWindow : Window
             return;
         }
 
-        SetBusy(true);
+        var cts = new CancellationTokenSource();
+        _launchCts = cts;
+        _launchProfile = profile;
+        SetLaunchUi(true);
+
         try
         {
             var usePipeline = PipelineToggleButton.IsEnabled && PipelineToggleButton.IsChecked == true;
-            _runningProcess = await _launcher.Launch(profile, _config.GameFolder, _config.GameExe, Log, usePipeline);
-            LaunchButton.Content = "■  Stop Game";
-            LaunchButton.IsEnabled = true;
-            Log("Started.");
+            var process = await _launcher.Launch(
+                profile, _config.GameFolder, _config.GameExe, Log, usePipeline,
+                onExited: () =>
+                {
+                    try { Dispatcher.Invoke(() => EndLaunch(cts)); }
+                    catch { /* the window is closing */ }
+                },
+                ct: cts.Token);
 
-            _runningProcess.Exited += (_, _) => Dispatcher.Invoke(() =>
+            // Stop was clicked just as the game process was being started: close it right away.
+            if (!ReferenceEquals(_launchCts, cts))
             {
-                _runningProcess = null;
-                LaunchButton.Content = "▶  Launch Game";
-                SetBusy(false);
-            });
+                try { process.Kill(entireProcessTree: true); } catch { /* already exited */ }
+                return;
+            }
+
+            _runningProcess = process;
+            Log("Started.");
+        }
+        catch (OperationCanceledException)
+        {
+            // Stop Game during the pipeline: StopGame() has already cleaned up and logged.
+            EndLaunch(cts);
         }
         catch (Exception ex)
         {
-            _runningProcess = null;
-            LaunchButton.Content = "▶  Launch Game";
-            Log("ERROR: " + ex.Message);
-            SetBusy(false);
+            if (ReferenceEquals(_launchCts, cts)) Log("ERROR: " + ex.Message);
+            EndLaunch(cts);
         }
     }
 }

@@ -19,7 +19,19 @@ public sealed record LauncherUpdateResult(
 
 public sealed class LauncherUpdateService
 {
-    public const string CurrentVersionString = "1.5.2";
+    /// <summary>
+    /// Version of the running launcher. It is read from the assembly, which gets it from
+    /// &lt;Version&gt; in the .csproj (the release workflow sets it from the git tag),
+    /// so it can never get out of sync with the release.
+    /// </summary>
+    public static readonly string CurrentVersionString = GetCurrentVersion();
+
+    private static string GetCurrentVersion()
+    {
+        var v = typeof(LauncherUpdateService).Assembly.GetName().Version;
+        return v == null ? "0.0.0" : $"{v.Major}.{v.Minor}.{Math.Max(v.Build, 0)}";
+    }
+
     private const string LatestReleaseApi = "https://api.github.com/repos/isaac-btw/AmericasLauncher/releases/latest";
 
     private static readonly HttpClient Http = CreateClient();

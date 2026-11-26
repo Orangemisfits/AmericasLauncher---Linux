@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
+using System.Diagnostics;
 using System.IO;
 using AmericasLauncher.Models;
 
@@ -57,6 +58,35 @@ public sealed class RunnerService
     }
 
     public bool IsInstalled(RunnerProfile p) => File.Exists(ExePath(p));
+
+    /// <summary>
+    /// Stops every running process that was started from this runner's own built exe
+    /// (e.g. a leftover victory.exe in the background). Processes with the same name that live
+    /// somewhere else, such as another runner's victory.exe, are not touched.
+    /// Returns how many processes were stopped.
+    /// </summary>
+    public static int KillRunnerProcesses(RunnerProfile p)
+    {
+        var exePath = Path.GetFullPath(ExePath(p));
+        var killed = 0;
+
+        foreach (var proc in Process.GetProcessesByName(Path.GetFileNameWithoutExtension(exePath)))
+        {
+            try
+            {
+                var path = proc.MainModule?.FileName;
+                if (path != null && string.Equals(Path.GetFullPath(path), exePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    proc.Kill(entireProcessTree: true);
+                    killed++;
+                }
+            }
+            catch { /* access denied, or the process already exited */ }
+            finally { proc.Dispose(); }
+        }
+
+        return killed;
+    }
 
     /// <summary>Short git revision of the installed source, or "" if unknown.</summary>
     public async Task<string> GetInstalledVersionAsync(RunnerProfile p, CancellationToken ct = default)

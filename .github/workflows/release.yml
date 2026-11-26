@@ -22,6 +22,14 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
+      # The tag (e.g. v1.5.3) is the single source of truth for the version shown in the app.
+      - name: Resolve version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v', 'V')
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
       - name: Restore dependencies
         run: dotnet restore src/AmericasLauncher/AmericasLauncher.csproj
 
@@ -31,6 +39,7 @@ jobs:
           -c Release
           -r win-x64
           --self-contained true
+          -p:Version=${{ steps.ver.outputs.version }}
           -p:PublishSingleFile=true
           -p:IncludeNativeLibrariesForSelfExtract=true
           -p:DebugType=none
@@ -39,33 +48,22 @@ jobs:
       - name: Zip output
         run: Compress-Archive -Path publish\* -DestinationPath AmericasLauncher-${{ github.ref_name }}-win-x64.zip
 
+      # These notes are also what the launcher shows in its "Updated to ..." popup.
+      - name: Prepare release notes
+        shell: pwsh
+        run: |
+          $file = "release-notes/${{ github.ref_name }}.md"
+          if (Test-Path $file) {
+            Copy-Item $file notes.md
+          } else {
+            "See the README for installation instructions: https://github.com/${{ github.repository }}#readme" | Out-File notes.md -Encoding utf8
+          }
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: Americas Launcher ${{ github.ref_name }}
-          body: |
-            ## Americas Launcher ${{ github.ref_name }}
-
-            A modern Windows launcher for GTA VI Xbox-to-PC compatibility runners.
-
-            ### Installation
-            1. Download `AmericasLauncher-${{ github.ref_name }}-win-x64.zip` below
-            2. Extract the ZIP anywhere you like
-            3. Run `AmericasLauncher.exe`
-            4. Go to **Settings** and pick your Game Folder and Game Executable
-            5. Select a runner card and click **Install / Update**, then **Launch Game**
-
-            ### Included Runners
-            | Runner | Repository |
-            |---|---|
-            | XCL | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
-            | Belabug - VIctory Based | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
-            | Dexnom - VIctory Based | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
-            | Zettrox - VIctory Based | [Zettrox/ztrx](https://github.com/Zettrox/ztrx) |
-            | VIctory (Original) | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
-
-            ---
-            > **Disclaimer:** Americas Launcher has no affiliation with Rockstar Games, Take-Two Interactive, or Grand Theft Auto. Use only with game files you legally own.
+          body_path: notes.md
           files: AmericasLauncher-${{ github.ref_name }}-win-x64.zip
           draft: false
           prerelease: false

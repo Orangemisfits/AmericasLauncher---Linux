@@ -1,7 +1,7 @@
 <Window x:Class="AmericasLauncher.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Americas Launcher - V1.5.2"
+        Title="Americas Launcher"
         Icon="/assets/americas-logo.ico"
         Width="1280"
         Height="720"
@@ -240,6 +240,29 @@
             </Setter>
         </Style>
 
+        <!-- Runner list: transparent, and only dimmed (never turned white) while it is disabled -->
+        <Style x:Key="RunnerListStyle" TargetType="ListBox">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBox">
+                        <Border x:Name="Bd"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Padding="{TemplateBinding Padding}">
+                            <ItemsPresenter SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Bd" Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Runner Card Item Container -->
         <Style x:Key="RunnerCardStyle" TargetType="ListBoxItem">
             <Setter Property="Margin" Value="4"/>
@@ -292,7 +315,8 @@
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                     <Image Source="/assets/logo.png" Width="18" Height="18" Stretch="Uniform" Margin="0,0,10,0"/>
-                    <TextBlock Text="Americas Launcher - V1.3.1"
+                    <TextBlock x:Name="TitleBarText"
+                               Text="Americas Launcher"
                                FontSize="12.5"
                                FontWeight="SemiBold"
                                Foreground="#E2E8F0"
@@ -425,7 +449,7 @@
                             </Hyperlink>
                         </TextBlock>
                         <TextBlock x:Name="SidebarVersionText"
-                                   Text="v1.5.2"
+                                   Text=""
                                    FontSize="12"
                                    Foreground="#64748B"
                                    HorizontalAlignment="Center"/>
@@ -455,8 +479,7 @@
 
                         <ListBox x:Name="RunnerBox"
                                  Grid.Column="0"
-                                 Background="Transparent"
-                                 BorderThickness="0"
+                                 Style="{StaticResource RunnerListStyle}"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                  ScrollViewer.VerticalScrollBarVisibility="Disabled"
                                  ItemContainerStyle="{StaticResource RunnerCardStyle}"
@@ -1068,7 +1091,7 @@
                                            VerticalAlignment="Center"
                                            FontSize="13"
                                            Foreground="#CBD5E1"
-                                           Text="Current version: v1.5.2"
+                                           Text="Current version"
                                            TextWrapping="Wrap"/>
                                 <Button x:Name="OpenReleaseButton"
                                         Grid.Column="3"
@@ -1123,7 +1146,7 @@
                            Foreground="#64748B"
                            HorizontalAlignment="Right"
                            Margin="0,8,0,0"
-                           Text="Closes in 5s"/>
+                           Text="Closes in 15s"/>
             </StackPanel>
         </Border>
     </Grid>
