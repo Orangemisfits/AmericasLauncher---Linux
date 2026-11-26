@@ -240,6 +240,151 @@
             </Setter>
         </Style>
 
+        <!-- Small icon button on a runner card (opens that runner's launch options); hidden until installed -->
+        <Style x:Key="CardIconButton" TargetType="Button">
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="20"/>
+            <Setter Property="Height" Value="20"/>
+            <Setter Property="HorizontalAlignment" Value="Left"/>
+            <Setter Property="VerticalAlignment" Value="Bottom"/>
+            <Setter Property="Margin" Value="-6,0,0,-5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bd" Background="Transparent" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1E40AF"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HealthState}" Value="NotInstalled">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- A name or value box in a Launch Options row; red border when the row cannot be saved -->
+        <Style x:Key="EnvRowBox" TargetType="TextBox" BasedOn="{StaticResource ModernTextBox}">
+            <Setter Property="FontFamily" Value="Consolas"/>
+            <Setter Property="FontSize" Value="12.5"/>
+            <Setter Property="Padding" Value="10,4"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding HasError}" Value="True">
+                    <Setter Property="BorderBrush" Value="#EF4444"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Section label inside a settings card -->
+        <Style x:Key="FieldLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Margin" Value="0,0,0,6"/>
+        </Style>
+
+        <!-- Modern Dark ComboBox (matches ModernTextBox) -->
+        <Style x:Key="ModernComboBox" TargetType="ComboBox">
+            <Setter Property="Foreground" Value="#E2E8F0"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="MaxDropDownHeight" Value="320"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border x:Name="Bd"
+                                                Background="#141923"
+                                                BorderBrush="#2F3B52"
+                                                BorderThickness="1"
+                                                CornerRadius="8">
+                                            <Path Data="M0,0 L4.5,4.5 L9,0"
+                                                  Stroke="#94A3B8"
+                                                  StrokeThickness="1.6"
+                                                  HorizontalAlignment="Right"
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,14,0"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="14,10,36,10"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center"/>
+                            <Popup x:Name="PART_Popup"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Fade">
+                                <Border Background="#141923"
+                                        BorderBrush="#2F3B52"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Margin="0,4,0,0"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    <ScrollViewer Margin="4">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="ItemContainerStyle">
+                <Setter.Value>
+                    <Style TargetType="ComboBoxItem">
+                        <Setter Property="Foreground" Value="#E2E8F0"/>
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ComboBoxItem">
+                                    <Border x:Name="Bd" Background="Transparent" CornerRadius="6" Padding="12,8">
+                                        <ContentPresenter/>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#1E293B"/>
+                                        </Trigger>
+                                        <Trigger Property="IsHighlighted" Value="True">
+                                            <Setter TargetName="Bd" Property="Background" Value="#1E3A8A"/>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Runner list: transparent, and only dimmed (never turned white) while it is disabled -->
         <Style x:Key="RunnerListStyle" TargetType="ListBox">
             <Setter Property="Background" Value="Transparent"/>
@@ -525,6 +670,15 @@
                                                 Background="{Binding StatusColor}"
                                                 VerticalAlignment="Stretch"
                                                 Margin="0,2,0,2"/>
+                                        <!-- Gear in the bottom-left corner, laid over the card so the text keeps its place -->
+                                        <Button Grid.Column="0"
+                                                Style="{StaticResource CardIconButton}"
+                                                Tag="{Binding}"
+                                                ToolTip="Launch options for this runner"
+                                                AutomationProperties.Name="Launch options"
+                                                Click="OpenRunnerSettings_Click">
+                                            <TextBlock Text="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="11"/>
+                                        </Button>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -963,6 +1117,153 @@
                                              IsReadOnly="True"
                                              Margin="12,0,0,0"/>
                                 </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Launch Options: per-runner environment variables and extra arguments, saved automatically -->
+                        <Border x:Name="LaunchOptionsCard"
+                                Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Margin="0,0,0,16">
+                            <StackPanel>
+                                <!-- American flag accent, as under the title bar -->
+                                <Border Height="3" CornerRadius="12,12,0,0">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                                            <GradientStop Color="#B91C1C" Offset="0.0"/>
+                                            <GradientStop Color="#F8FAFC" Offset="0.5"/>
+                                            <GradientStop Color="#1D4ED8" Offset="1.0"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                </Border>
+
+                                <StackPanel Margin="20,16,20,20">
+                                    <TextBlock Text="Launch Options"
+                                               FontSize="15"
+                                               FontWeight="Bold"
+                                               Foreground="#F8FAFC"/>
+                                    <TextBlock Text="Extra settings for each runner. Used every time it starts. Saved automatically."
+                                               FontSize="12"
+                                               Foreground="#94A3B8"
+                                               TextWrapping="Wrap"
+                                               Margin="0,4,0,16"/>
+
+                                    <TextBlock Text="RUNNER" Style="{StaticResource FieldLabel}"/>
+                                    <ComboBox x:Name="LaunchOptionsRunnerBox"
+                                              Style="{StaticResource ModernComboBox}"
+                                              DisplayMemberPath="Name"
+                                              AutomationProperties.Name="Runner"
+                                              Margin="0,0,0,16"
+                                              SelectionChanged="LaunchOptionsRunner_SelectionChanged"/>
+
+                                    <TextBlock Text="EXTRA ARGUMENTS" Style="{StaticResource FieldLabel}"/>
+                                    <TextBox x:Name="LaunchOptionsArgsBox"
+                                             Style="{StaticResource ModernTextBox}"
+                                             FontFamily="Consolas"
+                                             AutomationProperties.Name="Extra arguments"
+                                             ToolTip="Added after the runner's own arguments, e.g. --console series-s"
+                                             Margin="0,0,0,16"
+                                             TextChanged="LaunchOptionsArgs_TextChanged"/>
+
+                                    <TextBlock Text="ENVIRONMENT VARIABLES" Style="{StaticResource FieldLabel}"/>
+
+                                    <!-- Column headers -->
+                                    <Grid x:Name="LaunchEnvHeader" Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="3*"/>
+                                            <ColumnDefinition Width="22"/>
+                                            <ColumnDefinition Width="2*"/>
+                                            <ColumnDefinition Width="44"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="Name" FontSize="11.5" Foreground="#64748B" Margin="4,0,0,0"/>
+                                        <TextBlock Grid.Column="2" Text="Value" FontSize="11.5" Foreground="#64748B" Margin="4,0,0,0"/>
+                                    </Grid>
+
+                                    <!-- One row per variable -->
+                                    <ItemsControl x:Name="LaunchEnvRows">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,0,0,4" ToolTip="{Binding Error}">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="3*"/>
+                                                        <ColumnDefinition Width="22"/>
+                                                        <ColumnDefinition Width="2*"/>
+                                                        <ColumnDefinition Width="44"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBox Grid.Column="0"
+                                                             Style="{StaticResource EnvRowBox}"
+                                                             AutomationProperties.Name="Variable name"
+                                                             Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="="
+                                                               FontFamily="Consolas"
+                                                               FontSize="14"
+                                                               Foreground="#64748B"
+                                                               HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                    <TextBox Grid.Column="2"
+                                                             Style="{StaticResource EnvRowBox}"
+                                                             AutomationProperties.Name="Variable value"
+                                                             Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"/>
+                                                    <Button Grid.Column="3"
+                                                            Style="{StaticResource SecondaryButton}"
+                                                            Content="✕"
+                                                            FontSize="12"
+                                                            Padding="0,4"
+                                                            Margin="8,0,0,0"
+                                                            ToolTip="Remove"
+                                                            AutomationProperties.Name="Remove variable"
+                                                            Tag="{Binding}"
+                                                            Click="RemoveEnvRow_Click"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock x:Name="LaunchEnvEmptyText"
+                                               Text="None yet. Add one, or paste a list of NAME=value lines."
+                                               FontSize="12"
+                                               Foreground="#64748B"
+                                               Margin="2,2,0,10"/>
+
+                                    <WrapPanel Margin="0,6,0,12">
+                                        <Button x:Name="AddEnvRowButton"
+                                                Style="{StaticResource PatriotBlueButton}"
+                                                Content="+ Add"
+                                                Padding="14,6"
+                                                Margin="0,0,8,6"
+                                                ToolTip="Add a variable"
+                                                Click="AddEnvRow_Click"/>
+                                        <Button x:Name="PasteEnvListButton"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Content="Paste list"
+                                                Padding="14,6"
+                                                Margin="0,0,8,6"
+                                                ToolTip="Add NAME=value lines from the clipboard"
+                                                Click="PasteEnvList_Click"/>
+                                        <Button x:Name="CopyEnvListButton"
+                                                Style="{StaticResource SecondaryButton}"
+                                                Content="Copy list"
+                                                Padding="14,6"
+                                                Margin="0,0,8,6"
+                                                ToolTip="Copy these variables as NAME=value lines"
+                                                Click="CopyEnvList_Click"/>
+                                        <Button x:Name="RemoveAllEnvRowsButton"
+                                                Style="{StaticResource PatriotRedButton}"
+                                                Content="Remove all"
+                                                Padding="14,6"
+                                                Margin="0,0,0,6"
+                                                ToolTip="Remove every variable for this runner"
+                                                Click="RemoveAllEnvRows_Click"/>
+                                    </WrapPanel>
+
+                                    <TextBlock x:Name="LaunchOptionsStatusText"
+                                               FontSize="12"
+                                               Foreground="#94A3B8"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 

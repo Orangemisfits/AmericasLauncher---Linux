@@ -15,7 +15,8 @@ public sealed class LaunchService
     /// </summary>
     public async Task<Process> Launch(
         RunnerProfile p, string gameFolder, string gameExe, Action<string> log,
-        bool usePipeline = true, Action? onExited = null, CancellationToken ct = default, bool seriesS = false)
+        bool usePipeline = true, Action? onExited = null, CancellationToken ct = default,
+        RunnerLaunchOptions? options = null, bool seriesS = false)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -23,6 +24,15 @@ public sealed class LaunchService
         if (!File.Exists(gameExe)) throw new FileNotFoundException("Game exe not found.", gameExe);
 
         var workDir = Path.GetDirectoryName(exe)!;
+
+        // The user's launch settings for this runner (Settings > Launch Options), for every process below.
+        var env = LaunchOptionsService.ResolveEnv(options, RunnerService.SourceDir(p), gameFolder, gameExe, log);
+        if (options is { IsEmpty: false })
+        {
+            log($"Launch options for {p.Name}: {env.Count} environment variable(s)" +
+                (string.IsNullOrWhiteSpace(options.ExtraArgs) ? "" : $", extra arguments: {options.ExtraArgs.Trim()}"));
+            if (env.Count > 0) log("  " + string.Join(", ", env.Keys));
+        }
 
         // 1) Run the pre-launch commands (e.g. translate) one by one and wait for each to finish.
         if (usePipeline && p.PreLaunchArgs.Count > 0)
@@ -34,6 +44,14 @@ public sealed class LaunchService
             var lastOutputTicks = DateTime.UtcNow.Ticks;
             void TrackedLog(string line)
             {
+<<<<<<< HEAD
+                ct.ThrowIfCancellationRequested();
+                var preArgs = FormatArgs(rawArgs, gameFolder, gameExe);
+                log($"> {preArgs}");
+                var code = await ProcessRunner.RunAsync(exe, preArgs, workDir, log, ct, env);
+                if (code != 0)
+                    throw new InvalidOperationException($"Pre-launch command failed with exit code {code}.");
+=======
                 Interlocked.Exchange(ref lastOutputTicks, DateTime.UtcNow.Ticks);
                 log(line);
             }
@@ -58,6 +76,7 @@ public sealed class LaunchService
             {
                 heartbeatCts.Cancel();
                 await heartbeat;   // never throws, see HeartbeatAsync
+>>>>>>> main
             }
         }
 
@@ -66,12 +85,16 @@ public sealed class LaunchService
         // With a pipe, a slow reader (the launcher's UI) fills the small pipe buffer and the game's logging threads
         // block inside victory.exe. A file never blocks the game, and the game also survives the launcher closing.
         ct.ThrowIfCancellationRequested();
+<<<<<<< HEAD
+        var args = FormatArgs(LaunchOptionsService.ComposeArgs(p.LaunchArgs, options), gameFolder, gameExe);
+=======
         var args = FormatArgs(p.LaunchArgs, gameFolder, gameExe);
         var envConsole = p.UsesConsoleEnv ? (seriesS ? "lockhart" : "anaconda") : null;
         if (p.SupportsConsole && !p.UsesConsoleEnv)
             args += seriesS ? " --console series-s" : " --console series-x";
         if (p.SupportsConsole)
             log($"Console: {(seriesS ? "Xbox Series S" : "Xbox Series X")}");
+>>>>>>> main
         log($"> {args}");
 
         Directory.CreateDirectory(Path.GetDirectoryName(GameLogPath)!);
@@ -85,10 +108,14 @@ public sealed class LaunchService
             UseShellExecute = false,
             CreateNoWindow = true
         };
+<<<<<<< HEAD
+        LaunchOptionsService.Apply(psi.Environment, env);
+=======
         psi.Environment["AL_EXE"] = exe;
         psi.Environment["AL_ARGS"] = args;
         psi.Environment["AL_LOG"] = GameLogPath;
         if (envConsole != null) psi.Environment["XCL_DEVICE_TYPE"] = envConsole;
+>>>>>>> main
 
         var process = new Process { StartInfo = psi, EnableRaisingEvents = true };
         var tailDone = new CancellationTokenSource();
