@@ -69,14 +69,32 @@ public sealed class LauncherUpdateService
         string? downloadUrl = null;
         if (root.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
         {
+            // Pick the platform-specific zip. Since v1.7.0 releases contain both win-x64 and linux-x64
+            // zips; always prefer the one matching the current OS to avoid downloading the wrong binary.
+            var platformSuffix = OperatingSystem.IsWindows() ? "win-x64" : "linux-x64";
             foreach (var asset in assetsEl.EnumerateArray())
             {
                 var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
                 if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                    name.Contains(platformSuffix, StringComparison.OrdinalIgnoreCase) &&
                     asset.TryGetProperty("browser_download_url", out var dEl))
                 {
                     downloadUrl = dEl.GetString();
                     break;
+                }
+            }
+            // Fallback: any zip (pre-v1.7.0 single-asset releases)
+            if (downloadUrl == null)
+            {
+                foreach (var asset in assetsEl.EnumerateArray())
+                {
+                    var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";
+                    if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                        asset.TryGetProperty("browser_download_url", out var dEl))
+                    {
+                        downloadUrl = dEl.GetString();
+                        break;
+                    }
                 }
             }
         }
@@ -145,6 +163,10 @@ public sealed class LauncherUpdateService
             var subDirs = Directory.GetDirectories(extractDir);
             if (subDirs.Length == 1 && File.Exists(Path.Combine(subDirs[0], "AmericasLauncher.exe")))
                 sourceDir = subDirs[0];
+            else
+                throw new InvalidOperationException(
+                    "AmericasLauncher.exe was not found in the downloaded zip. " +
+                    "The wrong platform zip may have been downloaded. Please update manually.");
         }
 
         // Resolve the real install directory.
