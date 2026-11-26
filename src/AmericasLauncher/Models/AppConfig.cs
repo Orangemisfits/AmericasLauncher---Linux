@@ -10,9 +10,17 @@ public sealed class AppConfig
     public bool AutoUpdate { get; set; } = false;
     public string? PendingUpdateNotes { get; set; }
     public string? PendingUpdateVersion { get; set; }
+    public string CustomRunnersDir { get; set; } = "";
+    public string CustomCacheDir { get; set; } = "";
 
     /// <summary>Runner id -> true when Xbox Series S is chosen (default is Series X).</summary>
     public Dictionary<string, bool> SeriesS { get; set; } = new();
+
+    /// <summary>Runner id -> per-runner pipeline toggle (default is true).</summary>
+    public Dictionary<string, bool> RunnerPipeline { get; set; } = new();
+
+    /// <summary>Runner id -> per-runner resolution (540p, 720p, 1080p, 2K, 4K).</summary>
+    public Dictionary<string, string> RunnerResolution { get; set; } = new();
 
     /// <summary>Runner id -> installed source revision (short git hash).</summary>
     public Dictionary<string, string> InstalledVersions { get; set; } = new();

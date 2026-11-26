@@ -52,15 +52,19 @@ public partial class MainWindow : Window
         if (_launchStore.LoadProblem != null) Log("[!] " + _launchStore.LoadProblem);
 
         RunnerBox.ItemsSource = _profiles;
+        RunnerService.CustomRunnersRoot = _config.CustomRunnersDir;
+        RunnerService.CustomCacheRoot = _config.CustomCacheDir;
+
         RunnerBox.SelectedItem = _profiles.FirstOrDefault(p => p.Id == _config.SelectedRunnerId) ?? _profiles.FirstOrDefault();
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
-        PipelineToggleButton.IsChecked = _config.UsePipeline;
         AutoUpdateToggle.IsChecked = _config.AutoUpdate;
         AutoUpdateToggle.Content = _config.AutoUpdate ? "Auto Update: ON" : "Auto Update: OFF";
         UpdateMissingPathsBanner();
         UpdatePipelineState();
         UpdateConsoleState();
+        UpdateResolutionState();
+        UpdateCustomDirBoxes();
         EnsureLogTimer();
 
         if (!string.IsNullOrWhiteSpace(_config.PendingUpdateNotes))
@@ -86,6 +90,7 @@ public partial class MainWindow : Window
             }
             UpdatePipelineState();
             UpdateConsoleState();
+            UpdateResolutionState();
             UpdateRunnerLegendAndButtons(Selected);
             await RefreshVersionAsync();
         };
@@ -160,21 +165,156 @@ public partial class MainWindow : Window
         MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private bool PipelineSelected => Selected != null &&
+        (_config.RunnerPipeline.TryGetValue(Selected.Id, out var p) ? p : _config.UsePipeline);
+
     private void UpdatePipelineState()
     {
         if (PipelineToggleButton == null || PipelineWarningBanner == null) return;
         var supportsPipeline = Selected is { PreLaunchArgs.Count: > 0 };
         PipelineToggleButton.IsEnabled = supportsPipeline;
+        PipelineToggleButton.IsChecked = PipelineSelected;
         var showWarning = supportsPipeline && PipelineToggleButton.IsChecked == true;
         PipelineWarningBanner.Visibility = showWarning ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void PipelineToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (PipelineToggleButton == null) return;
-        _config.UsePipeline = PipelineToggleButton.IsChecked == true;
+        if (PipelineToggleButton == null || Selected == null) return;
+        var enabled = PipelineToggleButton.IsChecked == true;
+        _config.RunnerPipeline[Selected.Id] = enabled;
+        _config.UsePipeline = enabled;
         _configService.Save(_config);
         UpdatePipelineState();
+    }
+
+    private string SelectedResolution => Selected != null &&
+        _config.RunnerResolution.TryGetValue(Selected.Id, out var r) && !string.IsNullOrWhiteSpace(r) ? r : "1080p";
+
+    private void UpdateResolutionState()
+    {
+        if (ResolutionBox == null) return;
+        var res = SelectedResolution;
+        foreach (System.Windows.Controls.ComboBoxItem item in ResolutionBox.Items)
+        {
+            if (string.Equals(item.Content?.ToString(), res, StringComparison.OrdinalIgnoreCase))
+            {
+                ResolutionBox.SelectedItem = item;
+                break;
+            }
+        }
+    }
+
+    private void ResolutionBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (ResolutionBox?.SelectedItem is System.Windows.Controls.ComboBoxItem item && Selected != null)
+        {
+            var res = item.Content?.ToString() ?? "1080p";
+            _config.RunnerResolution[Selected.Id] = res;
+            _configService.Save(_config);
+        }
+    }
+
+    private void UpdateCustomDirBoxes()
+    {
+        if (CustomRunnersDirBox != null)
+            CustomRunnersDirBox.Text = string.IsNullOrWhiteSpace(_config.CustomRunnersDir) ? Paths.Root : _config.CustomRunnersDir;
+        if (CustomCacheDirBox != null)
+            CustomCacheDirBox.Text = string.IsNullOrWhiteSpace(_config.CustomCacheDir) ? RunnerService.PipelineCacheDir : _config.CustomCacheDir;
+    }
+
+    private void BrowseCustomRunnersDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFolderDialog { Title = "Select Custom Runners Directory" };
+        if (dlg.ShowDialog() == true)
+        {
+            _config.CustomRunnersDir = dlg.FolderName;
+            RunnerService.CustomRunnersRoot = dlg.FolderName;
+            _configService.Save(_config);
+            UpdateCustomDirBoxes();
+            RefreshStorageStats();
+            _ = CheckAllRunnersHealthAsync();
+            _ = RefreshVersionAsync();
+        }
+    }
+
+    private void ResetCustomRunnersDir_Click(object sender, RoutedEventArgs e)
+    {
+        _config.CustomRunnersDir = "";
+        RunnerService.CustomRunnersRoot = "";
+        _configService.Save(_config);
+        UpdateCustomDirBoxes();
+        RefreshStorageStats();
+        _ = CheckAllRunnersHealthAsync();
+        _ = RefreshVersionAsync();
+    }
+
+    private void BrowseCustomCacheDir_Click(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFolderDialog { Title = "Select Custom Pipeline / Shader Cache Directory" };
+        if (dlg.ShowDialog() == true)
+        {
+            _config.CustomCacheDir = dlg.FolderName;
+            RunnerService.CustomCacheRoot = dlg.FolderName;
+            _configService.Save(_config);
+            UpdateCustomDirBoxes();
+            RefreshStorageStats();
+        }
+    }
+
+    private void ResetCustomCacheDir_Click(object sender, RoutedEventArgs e)
+    {
+        _config.CustomCacheDir = "";
+        RunnerService.CustomCacheRoot = "";
+        _configService.Save(_config);
+        UpdateCustomDirBoxes();
+        RefreshStorageStats();
+    }
+
+    private void CoolStart_Click(object sender, RoutedEventArgs e)
+    {
+        var confirm = MessageBox.Show(
+            "Cool Start will delete all installed runners (Victory / XCL), pipeline/shader cache, and reset Americas Launcher local files.\n\nAre you sure you want to start fresh?",
+            "Cool Start (Clean Reset)",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes) return;
+
+        try
+        {
+            var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string[] dirsToDelete =
+            [
+                Paths.Root,
+                RunnerService.EffectiveRunnersRoot,
+                RunnerService.PipelineCacheDir,
+                Path.Combine(localAppData, "victory"),
+                Path.Combine(localAppData, "xcl")
+            ];
+
+            foreach (var dir in dirsToDelete.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (Directory.Exists(dir))
+                    RunnerService.DeleteDirectorySafe(dir);
+            }
+
+            _config.InstalledVersions.Clear();
+            _config.CustomRunnersDir = "";
+            _config.CustomCacheDir = "";
+            RunnerService.CustomRunnersRoot = "";
+            RunnerService.CustomCacheRoot = "";
+            _configService.Save(_config);
+
+            UpdateCustomDirBoxes();
+            RefreshStorageStats();
+            _ = CheckAllRunnersHealthAsync();
+            _ = RefreshVersionAsync();
+            MessageBox.Show("Cool Start complete. All runners and local files have been reset.", "Cool Start", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Cool Start failed: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private bool SeriesSSelected => Selected != null && _config.SeriesS.TryGetValue(Selected.Id, out var s) && s;
@@ -1016,7 +1156,8 @@ public partial class MainWindow : Window
                 },
                 ct: cts.Token,
                 options: options,
-                seriesS: SeriesSSelected);
+                seriesS: SeriesSSelected,
+                resolution: SelectedResolution);
 
             // Stop was clicked just as the game process was being started: close it right away.
             if (!ReferenceEquals(_launchCts, cts))

@@ -12,12 +12,21 @@ public sealed class RunnerService
 {
     private readonly DependencyService _dependencies = new();
 
-    public static string SourceDir(RunnerProfile p) => Path.Combine(Paths.Root, "sources", p.Id);
+    public static string CustomRunnersRoot { get; set; } = "";
+    public static string CustomCacheRoot { get; set; } = "";
+
+    public static string EffectiveRunnersRoot =>
+        !string.IsNullOrWhiteSpace(CustomRunnersRoot) ? CustomRunnersRoot : Paths.Root;
+
+    public static string SourceDir(RunnerProfile p) => Path.Combine(EffectiveRunnersRoot, "sources", p.Id);
     public static string ExePath(RunnerProfile p) => Path.Combine(SourceDir(p), p.Exe);
-    public static string PipelineCacheDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "victory",
-        "cache");
+    public static string PipelineCacheDir =>
+        !string.IsNullOrWhiteSpace(CustomCacheRoot)
+            ? CustomCacheRoot
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "victory",
+                "cache");
 
     public static long GetDirectorySize(string path)
     {

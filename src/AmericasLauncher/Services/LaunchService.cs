@@ -16,7 +16,7 @@ public sealed class LaunchService
     public async Task<Process> Launch(
         RunnerProfile p, string gameFolder, string gameExe, Action<string> log,
         bool usePipeline = true, Action? onExited = null, CancellationToken ct = default,
-        RunnerLaunchOptions? options = null, bool seriesS = false)
+        RunnerLaunchOptions? options = null, bool seriesS = false, string? resolution = null)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -27,6 +27,21 @@ public sealed class LaunchService
 
         // The user's launch settings for this runner (Settings > Launch Options), for every process below.
         var env = LaunchOptionsService.ResolveEnv(options, RunnerService.SourceDir(p), gameFolder, gameExe, log);
+        if (!env.ContainsKey("VICTORY_NO_WATCHDOG"))
+            env["VICTORY_NO_WATCHDOG"] = "1";
+        if (!string.IsNullOrWhiteSpace(RunnerService.CustomCacheRoot) && !env.ContainsKey("VICTORY_CACHE_DIR"))
+            env["VICTORY_CACHE_DIR"] = RunnerService.CustomCacheRoot;
+        var resValue = resolution switch
+        {
+            "540p" => "960x540",
+            "720p" => "1280x720",
+            "1080p" => "1920x1080",
+            "2K" => "2560x1440",
+            "4K" => "3840x2160",
+            _ => null
+        };
+        if (resValue != null && !env.ContainsKey("VICTORY_RESOLUTION"))
+            env["VICTORY_RESOLUTION"] = resValue;
         if (options is { IsEmpty: false })
         {
             log($"Launch options for {p.Name}: {env.Count} environment variable(s)" +

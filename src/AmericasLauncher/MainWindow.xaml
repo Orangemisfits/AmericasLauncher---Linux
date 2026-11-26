@@ -684,27 +684,98 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <Border Grid.Column="1"
-                                Background="#131823"
-                                BorderBrush="#2E3A52"
-                                BorderThickness="1"
-                                CornerRadius="10"
-                                Padding="12"
-                                Margin="4,0,0,0">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock x:Name="RunnerColorLegendTitle"
-                                           Text="Runner Status"
-                                           FontSize="12"
-                                           FontWeight="Bold"
-                                           Foreground="#F8FAFC"
-                                           Margin="0,0,0,4"/>
-                                <TextBlock x:Name="RunnerColorLegendText"
-                                           Text="Please select a runner"
-                                           FontSize="11.5"
-                                           Foreground="#94A3B8"
-                                           TextWrapping="Wrap"/>
-                            </StackPanel>
-                        </Border>
+                        <Grid Grid.Column="1" Margin="4,0,0,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="8"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+
+                            <!-- Runner Status (top half) -->
+                            <Border Grid.Row="0"
+                                    Background="#131823"
+                                    BorderBrush="#2E3A52"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="12,10">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RunnerColorLegendTitle"
+                                               Text="Runner Status"
+                                               FontSize="12"
+                                               FontWeight="Bold"
+                                               Foreground="#F8FAFC"
+                                               Margin="0,0,0,4"/>
+                                    <TextBlock x:Name="RunnerColorLegendText"
+                                               Text="Please select a runner"
+                                               FontSize="11.5"
+                                               Foreground="#94A3B8"
+                                               TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Runner Settings (bottom half) -->
+                            <Border Grid.Row="2"
+                                    Background="#131823"
+                                    BorderBrush="#2E3A52"
+                                    BorderThickness="1"
+                                    CornerRadius="10"
+                                    Padding="12,10">
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="Runner Settings"
+                                               FontSize="12"
+                                               FontWeight="Bold"
+                                               Foreground="#F8FAFC"
+                                               Margin="0,0,0,8"/>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="6"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <ToggleButton x:Name="PipelineToggleButton"
+                                                      Grid.Column="0"
+                                                      Style="{StaticResource PipelineToggleStyle}"
+                                                      Height="30"
+                                                      FontSize="11"
+                                                      Padding="6,0"
+                                                      Checked="PipelineToggle_Changed"
+                                                      Unchecked="PipelineToggle_Changed"/>
+                                        <Button x:Name="ConsoleButton"
+                                                Grid.Column="2"
+                                                Style="{StaticResource PatriotBlueButton}"
+                                                Content="Xbox Series X"
+                                                Height="30"
+                                                FontSize="11"
+                                                Padding="6,0"
+                                                Click="Console_Click"/>
+                                    </Grid>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0"
+                                                   Text="Resolution:"
+                                                   FontSize="11.5"
+                                                   Foreground="#94A3B8"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,8,0"/>
+                                        <ComboBox x:Name="ResolutionBox"
+                                                  Grid.Column="1"
+                                                  Style="{StaticResource ModernComboBox}"
+                                                  Height="28"
+                                                  FontSize="11.5"
+                                                  SelectionChanged="ResolutionBox_SelectionChanged">
+                                            <ComboBoxItem Content="540p"/>
+                                            <ComboBoxItem Content="720p"/>
+                                            <ComboBoxItem Content="1080p" IsSelected="True"/>
+                                            <ComboBoxItem Content="2K"/>
+                                            <ComboBoxItem Content="4K"/>
+                                        </ComboBox>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </Grid>
                     </Grid>
 
                     <!-- Action Bar: Install/Update, Launch Game, Version, Status -->
@@ -725,16 +796,6 @@
                                     Content="▶  Launch Game"
                                     Margin="10,0,0,0"
                                     Click="Launch_Click"/>
-                            <ToggleButton x:Name="PipelineToggleButton"
-                                          Style="{StaticResource PipelineToggleStyle}"
-                                          Margin="10,0,0,0"
-                                          Checked="PipelineToggle_Changed"
-                                          Unchecked="PipelineToggle_Changed"/>
-                            <Button x:Name="ConsoleButton"
-                                    Style="{StaticResource PatriotBlueButton}"
-                                    Content="Xbox Series X"
-                                    Margin="10,0,0,0"
-                                    Click="Console_Click"/>
                         </StackPanel>
 
                         <TextBlock x:Name="VersionText"
@@ -1286,12 +1347,55 @@
                                                FontWeight="Bold"
                                                Foreground="#F8FAFC"
                                                VerticalAlignment="Center"/>
-                                    <Button Grid.Column="1"
-                                            Style="{StaticResource SecondaryButton}"
-                                            Content="Refresh Sizes"
-                                            Padding="12,6"
-                                            Click="RefreshStorage_Click"/>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                        <Button Style="{StaticResource PatriotRedButton}"
+                                                Content="Cool Start (Reset)"
+                                                Padding="12,6"
+                                                Margin="0,0,8,0"
+                                                ToolTip="Delete all runners, cache, and Americas Launcher local files to start fresh"
+                                                Click="CoolStart_Click"/>
+                                        <Button Style="{StaticResource SecondaryButton}"
+                                                Content="Refresh Sizes"
+                                                Padding="12,6"
+                                                Click="RefreshStorage_Click"/>
+                                    </StackPanel>
                                 </Grid>
+
+                                <!-- Custom Directories -->
+                                <Border Background="#182030"
+                                        BorderBrush="#2B364D"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="14,10"
+                                        Margin="0,0,0,12">
+                                    <StackPanel>
+                                        <TextBlock Text="Custom Directories" FontSize="13" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
+                                        <Grid Margin="0,0,0,8">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Runners Folder" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="CustomRunnersDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="30" FontSize="12" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Browse..." Padding="10,4" Margin="0,0,6,0" Click="BrowseCustomRunnersDir_Click"/>
+                                            <Button Grid.Column="3" Style="{StaticResource SecondaryButton}" Content="Reset" Padding="10,4" Click="ResetCustomRunnersDir_Click"/>
+                                        </Grid>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="130"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="Pipeline Cache" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center"/>
+                                            <TextBox x:Name="CustomCacheDirBox" Grid.Column="1" Style="{StaticResource ModernTextBox}" IsReadOnly="True" Height="30" FontSize="12" Margin="0,0,8,0"/>
+                                            <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Browse..." Padding="10,4" Margin="0,0,6,0" Click="BrowseCustomCacheDir_Click"/>
+                                            <Button Grid.Column="3" Style="{StaticResource SecondaryButton}" Content="Reset" Padding="10,4" Click="ResetCustomCacheDir_Click"/>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
 
                                 <!-- Pipeline Cache Row -->
                                 <Border Background="#182030"
