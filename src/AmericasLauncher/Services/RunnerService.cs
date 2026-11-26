@@ -230,6 +230,9 @@ public sealed class RunnerService
         {
             if (!await _dependencies.EnsureAsync(dependency, log, ct)) return false;
         }
+        // Rust needs the MSVC linker AND the Windows SDK libraries; Build Tools installed by hand often lack the SDK.
+        if (p.Dependencies.Any(d => d.Check == "vsbuildtools") && !await DependencyService.EnsureWindowsSdkAsync(log, ct))
+            return false;
 
         // 2) Source code
         var dir = SourceDir(p);
@@ -284,15 +287,32 @@ public sealed class RunnerService
         // 3) Build
         log("=== Building (this can take several minutes) ===");
         var buildEnv = await AgilityService.BuildEnvironmentAsync(log, ct);
-        var vcvars = FindVcvars64();
+        var vcvars = await DependencyService.FindVcvars64Async(ct) ?? FindVcvars64();
+        if (vcvars == null) log("[!!] vcvars64.bat was not found; the build may fail to find link.exe.");
+        var buildScript = Path.Combine(Path.GetTempPath(), "AmericasLauncher-build.cmd");
         foreach (var command in p.BuildCommands)
         {
             log($"> {command}");
-            var fullCmd = vcvars != null ? $"call \"{vcvars}\" >NUL && {command}" : command;
-            var code = await ProcessRunner.RunAsync("cmd.exe", "/c " + fullCmd, dir, log, ct, buildEnv);
+            // Run through a script file instead of one long "cmd /c" line: no quoting surprises with "(x86)" paths,
+            // vcvars' own noise ("The system cannot find the file specified.") is hidden, and a missing LIB is reported.
+            var lines = new List<string> { "@echo off", "chcp 65001 >NUL" };
+            if (vcvars != null)
+            {
+                lines.Add("set \"VSCMD_SKIP_SENDTELEMETRY=1\"");
+                lines.Add($"call \"{vcvars}\" >NUL 2>&1");
+                lines.Add("if not defined LIB echo [!!] vcvars did not set LIB: the Windows SDK or C++ tools are not installed correctly.");
+            }
+            lines.Add(command);
+            lines.Add("exit /b %ERRORLEVEL%");
+            await File.WriteAllLinesAsync(buildScript, lines, new System.Text.UTF8Encoding(false), ct);
+
+            var code = await ProcessRunner.RunAsync("cmd.exe", $"/d /c \"\"{buildScript}\"\"", dir, log, ct, buildEnv);
             if (code != 0)
             {
                 log($"[!!] Command failed with exit code {code}.");
+                if (code == 1181 || !DependencyService.HasWindowsSdk())
+                    log("[!!] LNK1181 means the linker cannot find a system library. Install \"Windows 11 SDK\" (or Windows 10 SDK) " +
+                        "with the Visual Studio Installer (Modify on Build Tools), then run Install / Update again.");
                 return false;
             }
         }

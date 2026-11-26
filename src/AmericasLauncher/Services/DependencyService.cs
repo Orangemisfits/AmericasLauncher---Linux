@@ -89,19 +89,25 @@ public sealed class DependencyService
     /// "Desktop development with C++" workload). winget then says "already installed" and changes nothing,
     /// so add the workload with the Visual Studio Installer instead. Shows the normal Windows permission prompt.
     /// </summary>
-    private static async Task<bool> AddVcWorkloadAsync(Action<string> log, CancellationToken ct)
+    private static Task<bool> AddVcWorkloadAsync(Action<string> log, CancellationToken ct) =>
+        ModifyVsAsync("--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended",
+            "Visual Studio is installed, but without the C++ tools. Adding the \"Desktop development with C++\" workload",
+            log, ct);
+
+    /// <summary>Runs "Visual Studio Installer modify" with the Windows permission prompt. True when the installer ran.</summary>
+    private static async Task<bool> ModifyVsAsync(string addArgs, string what, Action<string> log, CancellationToken ct)
     {
         var paths = await VswhereAsync("-products * -prerelease -latest -property installationPath", ct);
         var setup = Path.Combine(VsInstallerDir, "setup.exe");
         if (paths.Count == 0 || !File.Exists(setup)) return false;
 
-        log("[..] Visual Studio is installed, but without the C++ tools. Adding the \"Desktop development with C++\" workload — accept the Windows permission prompt and wait...");
+        log($"[..] {what} — accept the Windows permission prompt and wait...");
         try
         {
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = setup,
-                Arguments = $"modify --installPath \"{paths[0]}\" --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --passive --norestart --wait",
+                Arguments = $"modify --installPath \"{paths[0]}\" {addArgs} --passive --norestart --wait",
                 UseShellExecute = true,
                 Verb = "runas"
             };
@@ -116,6 +122,60 @@ public sealed class DependencyService
             log("[!!] The permission prompt was cancelled.");
             return false;
         }
+    }
+
+    /// <summary>
+    /// True when a Windows 10/11 SDK with the x64 libraries (kernel32.lib) is installed. Without it the Rust
+    /// linker fails with "link.exe failed: exit code: 1181" (LNK1181: cannot open input file 'kernel32.lib').
+    /// </summary>
+    public static bool HasWindowsSdk()
+    {
+        try
+        {
+            var kits = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Windows Kits", "10", "Lib");
+            return Directory.Exists(kits) && Directory.EnumerateDirectories(kits)
+                .Any(v => File.Exists(Path.Combine(v, "um", "x64", "kernel32.lib")));
+        }
+        catch { return false; }
+    }
+
+    /// <summary>Makes sure the Windows SDK is installed (Build Tools installed by hand often lack it). True if present afterwards.</summary>
+    public static async Task<bool> EnsureWindowsSdkAsync(Action<string> log, CancellationToken ct)
+    {
+        if (HasWindowsSdk()) return true;
+
+        log("[..] The Windows SDK is missing (the linker needs kernel32.lib). Installing it...");
+        await ModifyVsAsync("--add Microsoft.VisualStudio.Component.Windows11SDK.22621 --includeRecommended",
+            "Adding the Windows SDK to Visual Studio Build Tools", log, ct);
+
+        if (!HasWindowsSdk())
+        {
+            // No Visual Studio installer to modify: install the stand-alone SDK.
+            try
+            {
+                await ProcessRunner.RunAsync("winget",
+                    "install --id Microsoft.WindowsSDK.10.0.22621 --exact --accept-package-agreements --accept-source-agreements --silent",
+                    null, Filter(log), ct);
+            }
+            catch (Win32Exception) { /* winget missing */ }
+        }
+
+        if (HasWindowsSdk()) { log("[ok] Windows SDK installed."); return true; }
+
+        log("[!!] The Windows SDK could not be installed automatically. Open the Visual Studio Installer, click Modify on " +
+            "Build Tools and tick \"Windows 11 SDK\" (or \"Windows 10 SDK\") under Desktop development with C++, then try again.");
+        return false;
+    }
+
+    /// <summary>Path of vcvars64.bat of the newest Visual Studio / Build Tools install (any year or edition), or null.</summary>
+    public static async Task<string?> FindVcvars64Async(CancellationToken ct)
+    {
+        foreach (var root in await VswhereAsync("-products * -prerelease -latest -property installationPath", ct))
+        {
+            var bat = Path.Combine(root, "VC", "Auxiliary", "Build", "vcvars64.bat");
+            if (File.Exists(bat)) return bat;
+        }
+        return null;
     }
 
     /// <summary>Installs the dependency with winget if it is missing. Returns true if it is available afterwards.</summary>

@@ -844,9 +844,10 @@ public partial class MainWindow : Window
                 Application.Current.Shutdown();
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Silent on startup auto-update check
+            // Silent on startup, but written to %LocalAppData%\AmericasLauncher\update.log
+            LauncherUpdateService.LogProblem("startup update check failed: " + ex.Message);
         }
     }
 

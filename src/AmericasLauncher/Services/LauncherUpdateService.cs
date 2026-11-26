@@ -136,6 +136,18 @@ public sealed class LauncherUpdateService
             Message: $"Latest release: {tag} (current: v{CurrentVersionString}).");
     }
 
+    /// <summary>Writes an update problem to %LocalAppData%\AmericasLauncher\update.log. Never throws.</summary>
+    public static void LogProblem(string text)
+    {
+        try
+        {
+            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AmericasLauncher");
+            Directory.CreateDirectory(dir);
+            File.AppendAllText(Path.Combine(dir, "update.log"), $"[{DateTime.Now}] v{CurrentVersionString}: {text}{Environment.NewLine}");
+        }
+        catch { /* logging must never break the launcher */ }
+    }
+
     public async Task DownloadAndApplyUpdateAsync(string downloadUrl, Action<string> onStatus, CancellationToken ct = default)
     {
         var tempRoot = Path.Combine(Path.GetTempPath(), "AmericasLauncherUpdate");
@@ -180,35 +192,40 @@ public sealed class LauncherUpdateService
         var pid = Environment.ProcessId;
         var scriptPath = Path.Combine(tempRoot, "apply.cmd");
 
-        // robocopy returns 0-7 for success (bit flags: 1=copied, 2=extra, 4=mismatched, 8=failed).
-        // We only care about exit codes >= 8 as actual errors.
-        // After copy, explicitly launch the NEW exe from the install dir.
-        var script = $"""
+        // robocopy returns 0-7 for success (bit flags) and 8+ for real errors. Everything is logged to
+        // %TEMP%\AmericasLauncher-update.log (outside the temp folder that gets deleted) so a failed update can be diagnosed;
+        // the window is hidden, so the script must never wait for a keypress. "chcp 65001" keeps non-ASCII paths intact.
+        var script = $""""
 @echo off
-setlocal
-
+chcp 65001 >NUL
+set "LOG=%TEMP%\AmericasLauncher-update.log"
+echo [%date% %time%] update started, waiting for PID {pid} to exit > "%LOG%"
+set /a waits=0
 :wait
-tasklist /FI "PID eq {pid}" 2>NUL | find /I "{pid}" >NUL
-if "%ERRORLEVEL%"=="0" (
-    timeout /t 1 /nobreak >NUL
-    goto wait
-)
-
+tasklist /FI "PID eq {pid}" /FO CSV /NH 2>NUL | find """{pid}""" >NUL
+if errorlevel 1 goto copy
+set /a waits+=1
+if %waits% GEQ 60 goto copy
 timeout /t 1 /nobreak >NUL
-
-robocopy "{sourceDir}" "{appDir}" /E /IS /IT /R:5 /W:1
-set ROBO=%ERRORLEVEL%
-if %ROBO% GEQ 8 (
-    echo [ERROR] robocopy failed with exit code %ROBO%
-    pause
-    goto cleanup
-)
-
+goto wait
+:copy
+set /a tries=0
+:retry
+echo [%time%] copying {sourceDir} to {appDir}, attempt %tries% >> "%LOG%"
+robocopy "{sourceDir}" "{appDir}" /E /IS /IT /R:3 /W:1 /NFL /NDL /NJH /NJS >> "%LOG%" 2>&1
+if %ERRORLEVEL% LSS 8 goto done
+set /a tries+=1
+if %tries% GEQ 10 goto failed
+timeout /t 2 /nobreak >NUL
+goto retry
+:failed
+echo [%time%] COPY FAILED: the old version stays in place >> "%LOG%"
+:done
+echo [%time%] starting launcher >> "%LOG%"
 start "" "{appDir}\AmericasLauncher.exe"
-
-:cleanup
+timeout /t 3 /nobreak >NUL
 rmdir /S /Q "{tempRoot}" 2>NUL
-""";
+"""";
         await File.WriteAllTextAsync(scriptPath, script, ct);
 
         onStatus("Restarting launcher...");
