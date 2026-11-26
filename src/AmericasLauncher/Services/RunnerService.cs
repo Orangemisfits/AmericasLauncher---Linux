@@ -257,19 +257,27 @@ public sealed class RunnerService
         }
 
         var after = await GetHeadAsync(dir, ct);
-        if (before != "" && before == after && IsInstalled(p))
+        // Windows 10: a runner built before the launcher added the Agility SDK exports is built
+        // again, though its source did not change (AgilityService).
+        var missingWindows10Support = AgilityService.Needed && IsInstalled(p) && !AgilityService.HasExports(ExePath(p));
+        if (before != "" && before == after && IsInstalled(p) && !missingWindows10Support)
         {
             log($"Already up to date ({after}).");
             config.InstalledVersions[p.Id] = after;
+            // (A failed download is said in the log; the launch tries again.)
+            await AgilityService.EnsureRuntimeAsync(ExePath(p), log, ct);
             return true;
         }
+        if (missingWindows10Support)
+            log("Windows 10: this runner was built without the D3D12 Agility SDK; building it again.");
 
         // 3) Build
         log("=== Building (this can take several minutes) ===");
+        var buildEnv = await AgilityService.BuildEnvironmentAsync(log, ct);
         foreach (var command in p.BuildCommands)
         {
             log($"> {command}");
-            var code = await ProcessRunner.RunAsync("cmd.exe", "/c " + command, dir, log, ct);
+            var code = await ProcessRunner.RunAsync("cmd.exe", "/c " + command, dir, log, ct, buildEnv);
             if (code != 0)
             {
                 log($"[!!] Command failed with exit code {code}.");
@@ -281,6 +289,15 @@ public sealed class RunnerService
         {
             log($"[!!] Build finished, but '{p.Exe}' was not found.");
             return false;
+        }
+
+        if (AgilityService.Needed)
+        {
+            if (AgilityService.HasExports(ExePath(p)))
+                await AgilityService.EnsureRuntimeAsync(ExePath(p), log, ct);
+            else
+                log("[!!] Windows 10: the built runner has no D3D12 Agility SDK exports; it may fail with " +
+                    "\"the device supports SM 0x65 only\" (not a Rust/cargo runner?).");
         }
 
         config.InstalledVersions[p.Id] = after;
