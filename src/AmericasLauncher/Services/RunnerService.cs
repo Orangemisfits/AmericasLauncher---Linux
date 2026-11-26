@@ -274,10 +274,12 @@ public sealed class RunnerService
         // 3) Build
         log("=== Building (this can take several minutes) ===");
         var buildEnv = await AgilityService.BuildEnvironmentAsync(log, ct);
+        var vcvars = FindVcvars64();
         foreach (var command in p.BuildCommands)
         {
             log($"> {command}");
-            var code = await ProcessRunner.RunAsync("cmd.exe", "/c " + command, dir, log, ct, buildEnv);
+            var fullCmd = vcvars != null ? $"call \"{vcvars}\" >NUL && {command}" : command;
+            var code = await ProcessRunner.RunAsync("cmd.exe", "/c " + fullCmd, dir, log, ct, buildEnv);
             if (code != 0)
             {
                 log($"[!!] Command failed with exit code {code}.");
@@ -312,5 +314,28 @@ public sealed class RunnerService
             "git", full ? "rev-parse HEAD" : "rev-parse --short HEAD", dir, s => { lock (lines) lines.Add(s); }, ct);
 
         lock (lines) return code == 0 ? (lines.FirstOrDefault()?.Trim() ?? "") : "";
+    }
+
+    private static string? FindVcvars64()
+    {
+        var pf86 = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86);
+        var pf = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        string[] roots = [pf86, pf];
+        string[] years = ["2022", "2019", "18"];
+        string[] editions = ["BuildTools", "Community", "Professional", "Enterprise"];
+
+        foreach (var root in roots)
+        {
+            if (string.IsNullOrEmpty(root)) continue;
+            foreach (var year in years)
+            {
+                foreach (var ed in editions)
+                {
+                    var candidate = Path.Combine(root, "Microsoft Visual Studio", year, ed, "VC", "Auxiliary", "Build", "vcvars64.bat");
+                    if (File.Exists(candidate)) return candidate;
+                }
+            }
+        }
+        return null;
     }
 }
