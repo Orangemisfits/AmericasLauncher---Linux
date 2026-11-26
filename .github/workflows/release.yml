@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-windows:
     name: Build Windows Release
     runs-on: windows-latest
 
@@ -22,7 +22,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      # The tag (e.g. v1.5.3) is the single source of truth for the version shown in the app.
+      # The tag (e.g. v1.7.0) is the single source of truth for the version shown in the app.
       - name: Resolve version from tag
         id: ver
         shell: pwsh
@@ -67,3 +67,38 @@ jobs:
           files: AmericasLauncher-${{ github.ref_name }}-win-x64.zip
           draft: false
           prerelease: false
+
+  build-linux:
+    name: Build Linux Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore src/AmericasLauncher.Linux/AmericasLauncher.Linux.csproj
+
+      - name: Publish (self-contained, linux-x64)
+        run: |
+          dotnet publish src/AmericasLauncher.Linux/AmericasLauncher.Linux.csproj \
+            -c Release \
+            -r linux-x64 \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:IncludeNativeLibrariesForSelfExtract=true \
+            -p:DebugType=none \
+            -o publish-linux
+
+      - name: Zip Linux output
+        run: cd publish-linux && zip -r ../AmericasLauncher-${{ github.ref_name }}-linux-x64.zip .
+
+      - name: Upload Linux artifact to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: AmericasLauncher-${{ github.ref_name }}-linux-x64.zip
