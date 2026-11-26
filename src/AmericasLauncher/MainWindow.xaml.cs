@@ -48,6 +48,8 @@ public partial class MainWindow : Window
 
         _config = _configService.Load();
         _profiles = ConfigService.LoadProfiles();
+        _launchStore = LaunchOptionsStore.Load();   // never throws; an unreadable file is set aside
+        if (_launchStore.LoadProblem != null) Log("[!] " + _launchStore.LoadProblem);
 
         RunnerBox.ItemsSource = _profiles;
         RunnerBox.SelectedItem = _profiles.FirstOrDefault(p => p.Id == _config.SelectedRunnerId) ?? _profiles.FirstOrDefault();
@@ -88,6 +90,7 @@ public partial class MainWindow : Window
             await RefreshVersionAsync();
         };
         Loaded += async (_, _) => await RefreshVersionAsync();
+        Closing += (_, _) => FlushLaunchOptionsSave();   // a launch-options edit made just before closing is saved
         StateChanged += (_, _) =>
         {
             var isMax = WindowState == WindowState.Maximized;
@@ -147,6 +150,7 @@ public partial class MainWindow : Window
     private async void Nav_Checked(object sender, RoutedEventArgs e)
     {
         if (LaunchView == null || PortStatusView == null || SettingsView == null) return;
+        FlushLaunchOptionsSave();   // an edit made just before leaving Settings is saved
         LaunchView.Visibility = LaunchNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PortStatusView.Visibility = PortStatusNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsView.Visibility = SettingsNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
@@ -159,8 +163,298 @@ public partial class MainWindow : Window
 
         if (SettingsNavButton.IsChecked == true)
         {
+            LoadLaunchOptionsEditor();
             await RefreshStorageAsync();
         }
+    }
+
+    // Settings > Launch Options: the runner shown in the editor and its variable rows. Changes save automatically.
+    private readonly LaunchOptionsStore _launchStore;
+    private RunnerProfile? _launchOptionsRunner;   // the runner whose rows the editor shows
+    private RunnerProfile? _launchOptionsTarget;   // set by a card's gear: show this one next
+    private readonly System.Collections.ObjectModel.ObservableCollection<EnvVarRow> _envRows = new();
+    private bool _loadingLaunchOptions;
+    private DispatcherTimer? _launchOptionsSaveTimer;
+
+    /// <summary>
+    /// Fills the runner dropdown with the installed runners and shows one runner's settings: the one already
+    /// shown if it is still installed, else the runner selected on the Launch page, else the first installed one.
+    /// </summary>
+    private void LoadLaunchOptionsEditor()
+    {
+        FlushLaunchOptionsSave();
+        LaunchEnvRows.ItemsSource = _envRows;
+
+        var installed = _profiles.Where(p => _runners.IsInstalled(p)).ToList();
+        var requested = _launchOptionsTarget;
+        _launchOptionsTarget = null;
+        var target = installed.FirstOrDefault(p => p.Id == requested?.Id)
+                     ?? installed.FirstOrDefault(p => p.Id == _launchOptionsRunner?.Id)
+                     ?? installed.FirstOrDefault(p => p.Id == Selected?.Id)
+                     ?? installed.FirstOrDefault();
+
+        _loadingLaunchOptions = true;
+        LaunchOptionsRunnerBox.ItemsSource = installed;
+        LaunchOptionsRunnerBox.SelectedItem = target;
+        _loadingLaunchOptions = false;
+
+        var enabled = target != null;
+        LaunchOptionsRunnerBox.IsEnabled = LaunchOptionsArgsBox.IsEnabled = enabled;
+        AddEnvRowButton.IsEnabled = PasteEnvListButton.IsEnabled = RemoveAllEnvRowsButton.IsEnabled = enabled;
+
+        if (target == null)
+        {
+            _launchOptionsRunner = null;
+            _loadingLaunchOptions = true;
+            ClearEnvRows();
+            LaunchOptionsArgsBox.Text = "";
+            _loadingLaunchOptions = false;
+            UpdateEnvRowsEmptyText();
+            SetLaunchOptionsStatus("No runners are installed yet. Install one on the Launch page first.", Brushes.LightSlateGray);
+            return;
+        }
+
+        ShowLaunchOptions(target);
+    }
+
+    /// <summary>Loads one runner's saved launch options into the editor.</summary>
+    private void ShowLaunchOptions(RunnerProfile profile)
+    {
+        _launchOptionsRunner = profile;
+        var options = _launchStore.Get(profile.Id);
+
+        _loadingLaunchOptions = true;
+        ClearEnvRows();
+        if (options != null)
+            foreach (var (name, value) in options.Env) AddEnvRow(name, value);
+        LaunchOptionsArgsBox.Text = options?.ExtraArgs ?? "";
+        _loadingLaunchOptions = false;
+
+        UpdateEnvRowsEmptyText();
+        if (_launchStore.LoadProblem is { } problem)
+            SetLaunchOptionsStatus(problem, Brushes.Orange);
+        else
+            SetLaunchOptionsStatus(DescribeLaunchOptions(options), Brushes.LightSlateGray);
+    }
+
+    /// <summary>The gear on a runner card: opens Settings with that runner's launch options.</summary>
+    private void OpenRunnerSettings_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: RunnerProfile profile }) return;
+        e.Handled = true;
+        if (!_runners.IsInstalled(profile))
+        {
+            Log($"{profile.Name} is not installed yet. Install it to give it launch options.");
+            return;
+        }
+
+        FlushLaunchOptionsSave();
+        _launchOptionsTarget = profile;   // the editor switches to it when it next loads
+
+        if (SettingsNavButton.IsChecked == true) LoadLaunchOptionsEditor();
+        else SettingsNavButton.IsChecked = true;   // Nav_Checked loads the editor
+        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => LaunchOptionsCard.BringIntoView());
+    }
+
+    private void LaunchOptionsRunner_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_loadingLaunchOptions || LaunchOptionsRunnerBox.SelectedItem is not RunnerProfile profile) return;
+        if (profile.Id == _launchOptionsRunner?.Id) return;
+        FlushLaunchOptionsSave();   // the previous runner's last edit is saved before switching
+        ShowLaunchOptions(profile);
+    }
+
+    private EnvVarRow AddEnvRow(string name = "", string value = "")
+    {
+        var row = new EnvVarRow { Name = name, Value = value };
+        row.PropertyChanged += EnvRow_PropertyChanged;
+        _envRows.Add(row);
+        UpdateEnvRowsEmptyText();
+        return row;
+    }
+
+    private void ClearEnvRows()
+    {
+        foreach (var row in _envRows) row.PropertyChanged -= EnvRow_PropertyChanged;
+        _envRows.Clear();
+    }
+
+    private void UpdateEnvRowsEmptyText()
+    {
+        var empty = _envRows.Count == 0;
+        LaunchEnvEmptyText.Visibility = empty ? Visibility.Visible : Visibility.Collapsed;
+        LaunchEnvHeader.Visibility = empty ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void EnvRow_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(EnvVarRow.Name) or nameof(EnvVarRow.Value)) ScheduleLaunchOptionsSave();
+    }
+
+    private void LaunchOptionsArgs_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) =>
+        ScheduleLaunchOptionsSave();
+
+    private void AddEnvRow_Click(object sender, RoutedEventArgs e) => AddEnvRow();
+
+    private void RemoveEnvRow_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: EnvVarRow row }) return;
+        row.PropertyChanged -= EnvRow_PropertyChanged;
+        _envRows.Remove(row);
+        UpdateEnvRowsEmptyText();
+        ScheduleLaunchOptionsSave();
+    }
+
+    private void RemoveAllEnvRows_Click(object sender, RoutedEventArgs e)
+    {
+        if (_launchOptionsRunner is not { } profile || _envRows.Count == 0) return;
+        var answer = MessageBox.Show(this, $"Remove all {_envRows.Count} environment variable(s) for {profile.Name}?",
+            "Remove all variables", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (answer != MessageBoxResult.Yes) return;
+        ClearEnvRows();
+        UpdateEnvRowsEmptyText();
+        ScheduleLaunchOptionsSave();
+    }
+
+    /// <summary>Adds NAME=value lines from the clipboard; a name that already has a row gets the new value.</summary>
+    private void PasteEnvList_Click(object sender, RoutedEventArgs e)
+    {
+        string text;
+        try { text = Clipboard.GetText(); }
+        catch { text = ""; }
+
+        var env = LaunchOptionsService.ParseEnv(text, out var errors);
+        if (env.Count == 0)
+        {
+            SetLaunchOptionsStatus("Nothing to paste: copy lines like NAME=value first.", Brushes.IndianRed);
+            return;
+        }
+
+        // Drop empty rows left from "Add variable" so the pasted list is not split by blanks.
+        foreach (var blank in _envRows.Where(r => r.Name.Trim() == "" && r.Value.Trim() == "").ToList())
+        {
+            blank.PropertyChanged -= EnvRow_PropertyChanged;
+            _envRows.Remove(blank);
+        }
+
+        foreach (var (name, value) in env)
+        {
+            var existing = _envRows.FirstOrDefault(r => string.Equals(r.Name.Trim(), name, StringComparison.OrdinalIgnoreCase));
+            if (existing != null) existing.Value = value;
+            else AddEnvRow(name, value);
+        }
+
+        UpdateEnvRowsEmptyText();
+        FlushLaunchOptionsSave(force: true);
+        if (errors.Count > 0)
+            SetLaunchOptionsStatus(LaunchOptionsStatusText.Text + $" Skipped {errors.Count} line(s). {errors[0]}", Brushes.Orange);
+    }
+
+    /// <summary>Copies the variables as NAME=value lines (what Paste list reads), plus the extra arguments as a comment.</summary>
+    private void CopyEnvList_Click(object sender, RoutedEventArgs e)
+    {
+        var rows = _envRows.Where(r => r.Name.Trim() != "").ToList();
+        var args = LaunchOptionsArgsBox.Text.Trim();
+        if (rows.Count == 0 && args == "")
+        {
+            SetLaunchOptionsStatus("Nothing to copy yet.", Brushes.LightSlateGray);
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        if (_launchOptionsRunner != null) sb.Append("# ").Append(_launchOptionsRunner.Name).AppendLine(" launch options");
+        if (args != "") sb.Append("# Extra arguments: ").AppendLine(args);
+        foreach (var row in rows) sb.Append(row.Name.Trim()).Append('=').AppendLine(row.Value);
+
+        try
+        {
+            Clipboard.SetText(sb.ToString());
+            SetLaunchOptionsStatus($"Copied {rows.Count} variable(s) to the clipboard.", Brushes.LimeGreen);
+        }
+        catch (Exception ex)
+        {
+            SetLaunchOptionsStatus("Could not copy: " + ex.Message, Brushes.IndianRed);
+        }
+    }
+
+    /// <summary>Saves shortly after the last change, so typing does not write the file on every key.</summary>
+    private void ScheduleLaunchOptionsSave()
+    {
+        if (_loadingLaunchOptions || _launchOptionsRunner == null) return;
+        if (_launchOptionsSaveTimer == null)
+        {
+            _launchOptionsSaveTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(400) };
+            _launchOptionsSaveTimer.Tick += (_, _) => FlushLaunchOptionsSave(force: true);
+        }
+        _launchOptionsSaveTimer.Stop();
+        _launchOptionsSaveTimer.Start();
+    }
+
+    /// <summary>Saves now if a save is waiting (or always, with <paramref name="force"/>).</summary>
+    private void FlushLaunchOptionsSave(bool force = false)
+    {
+        var pending = _launchOptionsSaveTimer?.IsEnabled == true;
+        _launchOptionsSaveTimer?.Stop();
+        if (pending || force) SaveLaunchOptions();
+    }
+
+    /// <summary>
+    /// Saves the rows that are valid. A row with a missing, invalid or repeated name is marked and left out,
+    /// and the status line says why. A fully empty row is ignored.
+    /// </summary>
+    private void SaveLaunchOptions()
+    {
+        if (_launchOptionsRunner is not { } profile) return;
+
+        var env = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var problems = 0;
+        string? firstProblem = null;
+        for (var i = 0; i < _envRows.Count; i++)
+        {
+            var row = _envRows[i];
+            var name = row.Name.Trim();
+            var value = row.Value;   // used exactly as typed: spaces can matter in a value
+
+            if (name == "" && value.Trim() == "") { row.Error = null; continue; }
+            if (name == "") row.Error = "Add a name.";
+            else if (!LaunchOptionsService.IsValidName(name)) row.Error = "A name cannot contain =.";
+            else if (env.ContainsKey(name)) row.Error = "This name is already in a row above.";
+            else if (LaunchOptionsService.CheckValue(value) is { } valueProblem) row.Error = valueProblem;
+            else { env[name] = value; row.Error = null; continue; }
+
+            problems++;
+            firstProblem ??= $"Row {i + 1}: {row.Error}";
+        }
+
+        var options = new RunnerLaunchOptions { Env = env, ExtraArgs = LaunchOptionsArgsBox.Text.Trim() };
+        _launchStore.Set(profile.Id, options);
+        if (_launchStore.Save() is { } saveError)
+        {
+            SetLaunchOptionsStatus("Not saved: " + saveError, Brushes.IndianRed);
+            return;
+        }
+
+        var saved = "Saved. " + DescribeLaunchOptions(options);
+        if (_launchStore.TakeNotice() is { } notice)
+            SetLaunchOptionsStatus($"{saved} {notice}", Brushes.Orange);
+        else if (problems > 0)
+            SetLaunchOptionsStatus($"{saved} {problems} row(s) skipped. {firstProblem}", Brushes.Orange);
+        else
+            SetLaunchOptionsStatus(saved, Brushes.LimeGreen);
+    }
+
+    private static string DescribeLaunchOptions(RunnerLaunchOptions? options)
+    {
+        if (options is not { IsEmpty: false }) return "No launch options. It starts normally.";
+        var text = $"{options.Env.Count} variable(s)";
+        if (!string.IsNullOrWhiteSpace(options.ExtraArgs)) text += $", arguments: {options.ExtraArgs.Trim()}";
+        return text + ".";
+    }
+
+    private void SetLaunchOptionsStatus(string text, Brush color)
+    {
+        LaunchOptionsStatusText.Text = text;
+        LaunchOptionsStatusText.Foreground = color;
     }
 
     private sealed record RunnerStorageItem(RunnerProfile Profile, string Name, string SizeText, bool CanDelete);
@@ -215,6 +509,9 @@ public partial class MainWindow : Window
             await Task.Run(() => RunnerService.DeleteDirectorySafe(RunnerService.SourceDir(profile)));
             _config.InstalledVersions.Remove(profile.Id);
             _configService.Save(_config);
+
+            LoadLaunchOptionsEditor();   // the Launch Options list only offers installed runners
+
             await RefreshStorageAsync();
             await RefreshVersionAsync();
         }
@@ -601,6 +898,7 @@ public partial class MainWindow : Window
         }
 
         if (Selected is not { } profile) return;
+        FlushLaunchOptionsSave();
 
         if (!_runners.IsInstalled(profile)) { Log("Click 'Install / Update' first."); return; }
         if (string.IsNullOrWhiteSpace(_config.GameFolder) || string.IsNullOrWhiteSpace(_config.GameExe))
@@ -626,6 +924,7 @@ public partial class MainWindow : Window
         try
         {
             var usePipeline = PipelineToggleButton.IsEnabled && PipelineToggleButton.IsChecked == true;
+            var options = _launchStore.Get(profile.Id);
             var process = await _launcher.Launch(
                 profile, _config.GameFolder, _config.GameExe, Log, usePipeline,
                 onExited: () =>
@@ -633,7 +932,8 @@ public partial class MainWindow : Window
                     try { Dispatcher.Invoke(() => EndLaunch(cts)); }
                     catch { /* the window is closing */ }
                 },
-                ct: cts.Token);
+                ct: cts.Token,
+                options: options);
 
             // Stop was clicked just as the game process was being started: close it right away.
             if (!ReferenceEquals(_launchCts, cts))

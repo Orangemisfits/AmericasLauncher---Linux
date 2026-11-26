@@ -11,7 +11,8 @@ public static class ProcessRunner
     /// </summary>
     public static async Task<int> RunAsync(
         string fileName, string arguments, string? workingDirectory,
-        Action<string> log, CancellationToken ct = default)
+        Action<string> log, CancellationToken ct = default,
+        IReadOnlyDictionary<string, string?>? environment = null)
     {
         var psi = new ProcessStartInfo
         {
@@ -24,6 +25,7 @@ public static class ProcessRunner
         };
         if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
         psi.Environment["GIT_TERMINAL_PROMPT"] = "0";   // never block waiting for git credentials
+        if (environment != null) LaunchOptionsService.Apply(psi.Environment, environment);
 
         using var process = new Process { StartInfo = psi };
         process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
