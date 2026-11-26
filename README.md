@@ -4,6 +4,14 @@ A modern Windows launcher that automatically sets up, updates, builds, and launc
 
 > This project is intended **only for games you legally own**, unpacked on your own PC. Americas Launcher does **not** include, download, or distribute games, keys, or console SDK files..
 
+> **Windows 10:** the system's Direct3D 12 stops at shader model 6.5, and the
+> runners stopped with "the device supports SM 0x65 only". On Windows 10 the
+> launcher builds every runner with the D3D12 Agility SDK exports and puts the
+> Agility SDK runtime (1.620.2 from nuget.org, checked by SHA-256) beside it,
+> without changing the runner's source. A runner built before that is rebuilt
+> by Install / Update. Windows 11 is unchanged.
+> See [`src/AmericasLauncher/Services/AgilityService.cs`](src/AmericasLauncher/Services/AgilityService.cs).
+
 ![Americas Launcher - Launch View](docs/images/launch-view.png)
 
 ## Features
