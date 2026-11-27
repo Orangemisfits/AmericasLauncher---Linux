@@ -50,10 +50,17 @@ public partial class MainWindow : Window
 
         _config = _configService.Load();
         _profiles = ConfigService.LoadProfiles();
+        var customProfile = _profiles.FirstOrDefault(p => string.Equals(p.Id, "custom", StringComparison.OrdinalIgnoreCase));
+        if (customProfile != null && !string.IsNullOrWhiteSpace(_config.CustomRunnerGitUrl))
+            customProfile.GitUrl = _config.CustomRunnerGitUrl;
+        if (CustomRunnerUrlBox != null)
+            CustomRunnerUrlBox.Text = _config.CustomRunnerGitUrl;
         _launchStore = LaunchOptionsStore.Load();   // never throws; an unreadable file is set aside
         if (_launchStore.LoadProblem != null) Log("[!] " + _launchStore.LoadProblem);
 
         RunnerBox.ItemsSource = _profiles;
+        if (RunnersDirectoryList != null)
+            RunnersDirectoryList.ItemsSource = _profiles;
         RunnerService.CustomRunnersRoot = _config.CustomRunnersDir;
         RunnerService.CustomCacheRoot = _config.CustomCacheDir;
 
@@ -169,23 +176,33 @@ public partial class MainWindow : Window
         MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    /// <summary>"amd" or "nvidia": the graphics card whose recommended settings are used for the selected runner.</summary>
+    /// <summary>"amd", "nvidia", or "off": the graphics card whose recommended settings are used for the selected runner.</summary>
     private string SelectedGpu => Selected == null ? "amd" :
-        _config.RunnerGpu.TryGetValue(Selected.Id, out var g) && (g == "amd" || g == "nvidia") ? g : Selected.DefaultGpu;
+        _config.RunnerGpu.TryGetValue(Selected.Id, out var g) && (g == "amd" || g == "nvidia" || g == "off") ? g : Selected.DefaultGpu;
 
     private void UpdateGpuState()
     {
         if (GpuButton == null) return;
         GpuButton.IsEnabled = Selected != null;
-        GpuButton.Content = SelectedGpu == "nvidia" ? "GPU: Nvidia" : "GPU: AMD";
-        GpuButton.ToolTip = "Choose your graphics card. The runner's recommended settings for that card are used.";
+        GpuButton.Content = SelectedGpu switch
+        {
+            "nvidia" => "GPU: Nvidia",
+            "off" => "GPU: Off",
+            _ => "GPU: AMD"
+        };
+        GpuButton.ToolTip = "Choose your graphics card (AMD, Nvidia, or Off). When Off, recommended settings are disabled.";
         UpdateRecommendedText();
     }
 
     private void Gpu_Click(object sender, RoutedEventArgs e)
     {
         if (Selected == null) return;
-        _config.RunnerGpu[Selected.Id] = SelectedGpu == "nvidia" ? "amd" : "nvidia";
+        _config.RunnerGpu[Selected.Id] = SelectedGpu switch
+        {
+            "amd" => "nvidia",
+            "nvidia" => "off",
+            _ => "amd"
+        };
         _configService.Save(_config);
         UpdateGpuState();
     }
@@ -210,7 +227,18 @@ public partial class MainWindow : Window
         }
 
         var gpu = SelectedGpu;
-        RecommendedTitleText.Text = $"{profile.Name} — {(gpu == "nvidia" ? "Nvidia" : "AMD")}";
+        var gpuLabel = gpu switch { "nvidia" => "Nvidia", "off" => "Off", _ => "AMD" };
+        RecommendedTitleText.Text = $"{profile.Name} — {gpuLabel}";
+        if (string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase))
+        {
+            RecommendedBodyText.Text = "Recommended settings are disabled for Nvidia - VIctory Based (the runner manages its own settings).";
+            return;
+        }
+        if (gpu == "off")
+        {
+            RecommendedBodyText.Text = "GPU is set to Off — recommended settings are disabled.";
+            return;
+        }
         var preset = profile.PresetFor(gpu);
         if (preset == null)
         {
@@ -232,6 +260,29 @@ public partial class MainWindow : Window
                 sb.AppendLine($"  {e.Name} = {e.Value}").AppendLine($"      {e.Description}");
         }
         RecommendedBodyText.Text = sb.ToString().TrimEnd();
+    }
+
+    private void CustomRunnerUrlSave_Click(object sender, RoutedEventArgs e)
+    {
+        var url = (CustomRunnerUrlBox?.Text ?? "").Trim().TrimEnd('/');
+        if (url.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            url = url[..^4];
+
+        _config.CustomRunnerGitUrl = url;
+        _configService.Save(_config);
+
+        var custom = _profiles.FirstOrDefault(p => string.Equals(p.Id, "custom", StringComparison.OrdinalIgnoreCase));
+        if (custom != null) custom.GitUrl = url;
+
+        if (CustomRunnerUrlStatusText != null)
+        {
+            CustomRunnerUrlStatusText.Text = string.IsNullOrWhiteSpace(url)
+                ? "Cleared. Custom Runner buttons are disabled until a GitHub URL is set."
+                : $"Saved: {url}";
+            CustomRunnerUrlStatusText.Foreground = string.IsNullOrWhiteSpace(url) ? Brushes.Orange : Brushes.LimeGreen;
+        }
+
+        UpdateRunnerLegendAndButtons(Selected);
     }
 
     private void UpdateCustomDirBoxes()
@@ -336,23 +387,44 @@ public partial class MainWindow : Window
         }
     }
 
-    private bool SeriesSSelected => Selected != null && _config.SeriesS.TryGetValue(Selected.Id, out var s) && s;
+    private string SelectedConsoleMode
+    {
+        get
+        {
+            if (Selected == null) return "x";
+            if (_config.ConsoleMode.TryGetValue(Selected.Id, out var m) && (m == "x" || m == "s" || m == "off"))
+                return m;
+            if (_config.SeriesS.TryGetValue(Selected.Id, out var s) && s)
+                return "s";
+            return "x";
+        }
+    }
 
     private void UpdateConsoleState()
     {
         if (ConsoleButton == null) return;
         var supported = Selected is { SupportsConsole: true };
         ConsoleButton.IsEnabled = supported;
-        ConsoleButton.Content = !supported ? "Console: N/A" : SeriesSSelected ? "Xbox Series S" : "Xbox Series X";
+        ConsoleButton.Content = !supported ? "Console: N/A" : SelectedConsoleMode switch
+        {
+            "s" => "Xbox Series S",
+            "off" => "Console: OFF",
+            _ => "Xbox Series X"
+        };
         ConsoleButton.ToolTip = supported
-            ? "Click to switch between Xbox Series X and Xbox Series S for this runner."
+            ? "Click to cycle between Xbox Series X, Xbox Series S, and OFF for this runner."
             : "This runner has no console selection.";
     }
 
     private void Console_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is not { SupportsConsole: true } profile) return;
-        _config.SeriesS[profile.Id] = !SeriesSSelected;
+        _config.ConsoleMode[profile.Id] = SelectedConsoleMode switch
+        {
+            "x" => "s",
+            "s" => "off",
+            _ => "x"
+        };
         _configService.Save(_config);
         UpdateConsoleState();
     }
@@ -366,10 +438,11 @@ public partial class MainWindow : Window
 
     private async void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        if (LaunchView == null || PortStatusView == null || SettingsView == null) return;
+        if (LaunchView == null || PortStatusView == null || RunnersView == null || SettingsView == null) return;
         FlushLaunchOptionsSave();   // an edit made just before leaving Settings is saved
         LaunchView.Visibility = LaunchNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         PortStatusView.Visibility = PortStatusNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        RunnersView.Visibility = RunnersNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsView.Visibility = SettingsNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
         if (PortStatusNavButton.IsChecked == true && !_portLoadedOnce)
@@ -454,11 +527,19 @@ public partial class MainWindow : Window
             SetLaunchOptionsStatus(DescribeLaunchOptions(options), Brushes.LightSlateGray);
     }
 
-    /// <summary>The gear on a runner card: opens Settings with that runner's launch options.</summary>
+    /// <summary>The gear on a runner card: opens Settings with that runner's launch options (or Custom Runner settings).</summary>
     private void OpenRunnerSettings_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not System.Windows.Controls.Button { Tag: RunnerProfile profile }) return;
         e.Handled = true;
+
+        if (string.Equals(profile.Id, "custom", StringComparison.OrdinalIgnoreCase))
+        {
+            if (SettingsNavButton.IsChecked != true) SettingsNavButton.IsChecked = true;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => CustomRunnerCard.BringIntoView());
+            return;
+        }
+
         if (!_runners.IsInstalled(profile))
         {
             Log($"{profile.Name} is not installed yet. Install it to give it launch options.");
@@ -902,22 +983,35 @@ public partial class MainWindow : Window
         UpdateRunnerLegendAndButtons(Selected);
     }
 
+    private void OpenRunnerGithub_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: RunnerProfile profile }) return;
+        var url = (profile.GitUrl ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            MessageBox.Show("No GitHub URL is set for this runner yet.", "Runners", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        if (url.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            url = url[..^4];
+        try
+        {
+            Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show("Could not open browser: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void ShowReleaseNoteToast(string version, string notes)
     {
         ToastVersionText.Text = $"Updated to {version}";
         ToastNotesText.Text = notes;
         ReleaseNoteToast.Visibility = Visibility.Visible;
-        _toastCountdown = ToastSeconds;
-        ToastCountdownText.Text = $"Closes in {ToastSeconds}s";
+        ToastCountdownText.Text = "";
         _toastTimer?.Stop();
-        _toastTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-        _toastTimer.Tick += (_, _) =>
-        {
-            _toastCountdown--;
-            if (_toastCountdown <= 0) CloseToast();
-            else ToastCountdownText.Text = $"Closes in {_toastCountdown}s";
-        };
-        _toastTimer.Start();
+        _toastTimer = null;
     }
 
     private void CloseToast()
@@ -1044,12 +1138,19 @@ public partial class MainWindow : Window
     private string? BuiltVersion(RunnerProfile profile) =>
         _config.InstalledVersions.TryGetValue(profile.Id, out var v) && !string.IsNullOrWhiteSpace(v) ? v : null;
 
+    private bool IsMissingCustomUrl(RunnerProfile? profile) =>
+        profile != null &&
+        string.Equals(profile.Id, "custom", StringComparison.OrdinalIgnoreCase) &&
+        string.IsNullOrWhiteSpace(_config.CustomRunnerGitUrl);
+
     private void SetBusy(bool busy)
     {
         var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
-        UpdateSourceButton.IsEnabled = !busy && !isBroken;
-        InstallButton.IsEnabled = !busy && !isBroken;
-        LaunchButton.IsEnabled = !busy;
+        var missingCustom = IsMissingCustomUrl(Selected);
+        UpdateSourceButton.IsEnabled = !busy && !isBroken && !missingCustom;
+        InstallButton.IsEnabled = !busy && !isBroken && !missingCustom;
+        BuildDlssButton.IsEnabled = !busy;
+        LaunchButton.IsEnabled = !busy && !missingCustom;
         RunnerBox.IsEnabled = !busy;
         Progress.IsIndeterminate = busy;
     }
@@ -1058,10 +1159,12 @@ public partial class MainWindow : Window
     private void SetLaunchUi(bool active)
     {
         var isBroken = Selected?.HealthState == RunnerHealthState.Broken;
+        var missingCustom = IsMissingCustomUrl(Selected);
         LaunchButton.Content = active ? "■  Stop Game" : "▶  Launch Game";
-        LaunchButton.IsEnabled = true;   // while active this is the Stop button, so it must stay clickable
-        UpdateSourceButton.IsEnabled = !active && !isBroken;
-        InstallButton.IsEnabled = !active && !isBroken;
+        LaunchButton.IsEnabled = active || !missingCustom;   // while active this is the Stop button, so it must stay clickable
+        UpdateSourceButton.IsEnabled = !active && !isBroken && !missingCustom;
+        InstallButton.IsEnabled = !active && !isBroken && !missingCustom;
+        BuildDlssButton.IsEnabled = !active;
         RunnerBox.IsEnabled = !active;
         Progress.IsIndeterminate = active;
     }
@@ -1149,9 +1252,15 @@ public partial class MainWindow : Window
             _ => review ? "Black: Runner is not built yet." : "Black: Runner is not installed yet."
         };
 
-        var enabled = profile.HealthState != RunnerHealthState.Broken && !Progress.IsIndeterminate;
+        var missingCustom = IsMissingCustomUrl(profile);
+        var enabled = profile.HealthState != RunnerHealthState.Broken && !Progress.IsIndeterminate && !missingCustom;
         UpdateSourceButton.IsEnabled = enabled;
         InstallButton.IsEnabled = enabled;
+        LaunchButton.IsEnabled = !Progress.IsIndeterminate && !missingCustom;
+        BuildDlssButton.Visibility = string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase)
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+        BuildDlssButton.IsEnabled = !Progress.IsIndeterminate;
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -1299,6 +1408,22 @@ public partial class MainWindow : Window
 
         try
         {
+            // For Nvidia - VIctory Based: if play-victory.cmd exists in the runner folder, run it.
+            if (string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase))
+            {
+                var sourceDir = RunnerService.SourceDir(profile);
+                var playVictoryCmd = Path.Combine(sourceDir, "play-victory.cmd");
+                if (File.Exists(playVictoryCmd))
+                {
+                    Log("=== Running play-victory.cmd ===");
+                    var code = await ProcessRunner.RunInteractiveAsync(
+                        "cmd.exe", $"/c \"{playVictoryCmd}\"", sourceDir, Log, SetLogInputSender, cts.Token);
+                    Log($"play-victory.cmd exited with code {code}.");
+                    EndLaunch(cts);
+                    return;
+                }
+            }
+
             var options = _launchStore.Get(profile.Id);
             var process = await _launcher.Launch(
                 profile, _config.GameFolder, _config.GameExe, Log,
@@ -1309,7 +1434,7 @@ public partial class MainWindow : Window
                 },
                 ct: cts.Token,
                 options: options,
-                seriesS: SeriesSSelected,
+                consoleMode: SelectedConsoleMode,
                 gpu: SelectedGpu,
                 useRecommended: _config.UseRecommended);
 
@@ -1332,6 +1457,95 @@ public partial class MainWindow : Window
         {
             if (ReferenceEquals(_launchCts, cts)) Log("ERROR: " + ex.Message);
             EndLaunch(cts);
+        }
+    }
+
+    private Action<string>? _sendLogInput;
+
+    private void SetLogInputSender(Action<string>? sender)
+    {
+        _sendLogInput = sender;
+        Dispatcher.Invoke(() =>
+        {
+            if (LogInputPanel != null)
+                LogInputPanel.Visibility = sender != null ? Visibility.Visible : Visibility.Collapsed;
+            if (sender != null)
+                LogInputBox?.Focus();
+        });
+    }
+
+    private void LogInputBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            SendCurrentLogInput();
+        }
+    }
+
+    private void LogInputSend_Click(object sender, RoutedEventArgs e) => SendCurrentLogInput();
+
+    private void SendCurrentLogInput()
+    {
+        if (LogInputBox == null || _sendLogInput == null) return;
+        var text = LogInputBox.Text;
+        LogInputBox.Clear();
+        Log($"> {text}");
+        _sendLogInput(text);
+    }
+
+    private async void BuildDlss_Click(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } profile || _busy) return;
+        if (!string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase)) return;
+
+        var sourceDir = RunnerService.SourceDir(profile);
+        if (!Directory.Exists(sourceDir))
+        {
+            Log("Runner source folder not found. Click 'Update Source' first.");
+            return;
+        }
+
+        var dlssCmd = Path.Combine(sourceDir, "Get-NVIDIA-DLSS.cmd");
+        var framegenCmd = Path.Combine(sourceDir, "PLAY_FRAMEGEN.cmd");
+
+        LogBox.Clear();
+        SetBusy(true);
+        try
+        {
+            if (File.Exists(dlssCmd))
+            {
+                Log("=== Running Get-NVIDIA-DLSS.cmd ===");
+                var code1 = await ProcessRunner.RunInteractiveAsync(
+                    "cmd.exe", $"/c \"{dlssCmd}\"", sourceDir, Log, SetLogInputSender);
+                Log($"Get-NVIDIA-DLSS.cmd exited with code {code1}.");
+            }
+            else
+            {
+                Log("[!] Get-NVIDIA-DLSS.cmd not found in runner folder.");
+            }
+
+            if (File.Exists(framegenCmd))
+            {
+                Log("=== Running PLAY_FRAMEGEN.cmd ===");
+                Log("Type your choice (e.g. 1-6) in the input box below and press Enter.");
+                var code2 = await ProcessRunner.RunInteractiveAsync(
+                    "cmd.exe", $"/c \"{framegenCmd}\"", sourceDir, Log, SetLogInputSender);
+                Log($"PLAY_FRAMEGEN.cmd exited with code {code2}.");
+            }
+            else
+            {
+                Log("[!] PLAY_FRAMEGEN.cmd not found in runner folder.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log("ERROR: " + ex.Message);
+        }
+        finally
+        {
+            SetLogInputSender(null);
+            SetBusy(false);
         }
     }
 }

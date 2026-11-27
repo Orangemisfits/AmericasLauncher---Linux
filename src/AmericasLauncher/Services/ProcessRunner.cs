@@ -83,4 +83,65 @@ public static class ProcessRunner
             return string.Empty;
         }
     }
+
+    /// <summary>
+    /// Runs a console process hidden with redirected stdin, stdout, and stderr.
+    /// Calls <paramref name="setInputSender"/> with a line-sending delegate while running, and null when done.
+    /// </summary>
+    public static async Task<int> RunInteractiveAsync(
+        string fileName, string arguments, string? workingDirectory,
+        Action<string> log, Action<Action<string>?> setInputSender,
+        CancellationToken ct = default,
+        IReadOnlyDictionary<string, string?>? environment = null)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        };
+        if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
+        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        if (environment != null) LaunchOptionsService.Apply(psi.Environment, environment);
+
+        using var process = new Process { StartInfo = psi };
+        process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
+        process.ErrorDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
+
+        process.Start();
+        process.BeginOutputReadLine();
+        process.BeginErrorReadLine();
+
+        setInputSender(text =>
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.StandardInput.WriteLine(text);
+                    process.StandardInput.Flush();
+                }
+            }
+            catch { /* process may have exited */ }
+        });
+
+        try
+        {
+            await process.WaitForExitAsync(ct);
+        }
+        catch (OperationCanceledException)
+        {
+            try { process.Kill(entireProcessTree: true); } catch { /* already exited */ }
+            throw;
+        }
+        finally
+        {
+            setInputSender(null);
+        }
+        return process.ExitCode;
+    }
 }

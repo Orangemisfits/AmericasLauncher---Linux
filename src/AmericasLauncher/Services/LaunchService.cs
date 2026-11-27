@@ -15,7 +15,7 @@ public sealed class LaunchService
     public async Task<Process> Launch(
         RunnerProfile p, string gameFolder, string gameExe, Action<string> log,
         Action? onExited = null, CancellationToken ct = default,
-        RunnerLaunchOptions? options = null, bool seriesS = false, string gpu = "amd", bool useRecommended = true)
+        RunnerLaunchOptions? options = null, string consoleMode = "x", string gpu = "amd", bool useRecommended = true)
     {
         var exe = RunnerService.ExePath(p);
         if (!File.Exists(exe)) throw new FileNotFoundException($"{p.Name} is not installed yet.", exe);
@@ -35,7 +35,9 @@ public sealed class LaunchService
         }
 
         // The runner's recommended settings for the chosen graphics card, with the user's own launch options on top.
-        var preset = useRecommended ? p.PresetFor(gpu) : null;
+        // Disabled when GPU is "off" or for Nvidia - VIctory Based (manages its own settings).
+        var applyRecommended = useRecommended && gpu != "off" && !string.Equals(p.Id, "nvidia", StringComparison.OrdinalIgnoreCase);
+        var preset = applyRecommended ? p.PresetFor(gpu) : null;
         var userOptions = options;
         var merged = new RunnerLaunchOptions();
         if (preset != null)
@@ -71,11 +73,13 @@ public sealed class LaunchService
         // block inside victory.exe. A file never blocks the game, and the game also survives the launcher closing.
         ct.ThrowIfCancellationRequested();
         var args = FormatArgs(LaunchOptionsService.ComposeArgs(p.LaunchArgs, options), gameFolder, gameExe);
-        var envConsole = p.UsesConsoleEnv ? (seriesS ? "lockhart" : "anaconda") : null;
-        if (p.SupportsConsole && !p.UsesConsoleEnv)
-            args += seriesS ? " --console series-s" : " --console series-x";
+        var envConsole = (p.UsesConsoleEnv && consoleMode != "off")
+            ? (consoleMode == "s" ? "lockhart" : "anaconda")
+            : null;
+        if (p.SupportsConsole && !p.UsesConsoleEnv && consoleMode != "off")
+            args += consoleMode == "s" ? " --console series-s" : " --console series-x";
         if (p.SupportsConsole)
-            log($"Console: {(seriesS ? "Xbox Series S" : "Xbox Series X")}");
+            log($"Console: {(consoleMode == "off" ? "OFF" : consoleMode == "s" ? "Xbox Series S" : "Xbox Series X")}");
         log($"> {args}");
 
         Directory.CreateDirectory(Path.GetDirectoryName(GameLogPath)!);

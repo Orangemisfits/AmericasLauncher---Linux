@@ -559,6 +559,26 @@
 
                     <!-- Navigation Items -->
                     <StackPanel Grid.Row="2">
+                        <!-- Home (Coming Soon) -->
+                        <RadioButton x:Name="HomeNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     IsEnabled="False"
+                                     Opacity="0.6">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="🏠" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Home" VerticalAlignment="Center"/>
+                                <Border Background="#1E293B"
+                                        BorderBrush="#334155"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="6,1"
+                                        Margin="8,0,0,0"
+                                        VerticalAlignment="Center">
+                                    <TextBlock Text="Soon" FontSize="10" Foreground="#94A3B8" FontWeight="SemiBold"/>
+                                </Border>
+                            </StackPanel>
+                        </RadioButton>
+
                         <RadioButton x:Name="LaunchNavButton"
                                      Style="{StaticResource NavRadioStyle}"
                                      IsChecked="True"
@@ -576,6 +596,16 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="📡" Margin="0,0,10,0" VerticalAlignment="Center"/>
                                 <TextBlock Text="Port Status" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+
+                        <!-- Runners -->
+                        <RadioButton x:Name="RunnersNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     Checked="Nav_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="📦" Margin="0,0,10,0" VerticalAlignment="Center"/>
+                                <TextBlock Text="Runners" VerticalAlignment="Center"/>
                             </StackPanel>
                         </RadioButton>
 
@@ -775,6 +805,13 @@
                                     Style="{StaticResource PatriotBlueButton}"
                                     Content="Install / Update"
                                     Click="Install_Click"/>
+                            <Button x:Name="BuildDlssButton"
+                                    Style="{StaticResource PatriotBlueButton}"
+                                    Content="⚡  Build with DLSS"
+                                    Margin="10,0,0,0"
+                                    Visibility="Collapsed"
+                                    ToolTip="Runs Get-NVIDIA-DLSS.cmd and PLAY_FRAMEGEN.cmd inside the Nvidia runner folder."
+                                    Click="BuildDlss_Click"/>
                             <Button x:Name="LaunchButton"
                                     Style="{StaticResource PatriotRedButton}"
                                     Content="▶  Launch Game"
@@ -844,16 +881,49 @@
                             BorderThickness="1"
                             CornerRadius="10"
                             Padding="4">
-                        <TextBox x:Name="LogBox"
-                                 Background="Transparent"
-                                 Foreground="#E2E8F0"
-                                 BorderThickness="0"
-                                 IsReadOnly="True"
-                                 TextWrapping="Wrap"
-                                 VerticalScrollBarVisibility="Auto"
-                                 FontFamily="Consolas"
-                                 FontSize="12.5"
-                                 Padding="10"/>
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="*"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+                            <TextBox x:Name="LogBox"
+                                     Grid.Row="0"
+                                     Background="Transparent"
+                                     Foreground="#E2E8F0"
+                                     BorderThickness="0"
+                                     IsReadOnly="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     FontFamily="Consolas"
+                                     FontSize="12.5"
+                                     Padding="10"/>
+                            <Grid x:Name="LogInputPanel"
+                                  Grid.Row="1"
+                                  Margin="6,4,6,6"
+                                  Visibility="Collapsed">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="LogInputBox"
+                                         Grid.Column="0"
+                                         Background="#141822"
+                                         Foreground="#F8FAFC"
+                                         CaretBrush="#F8FAFC"
+                                         BorderBrush="#2E3A52"
+                                         BorderThickness="1"
+                                         FontFamily="Consolas"
+                                         FontSize="12.5"
+                                         Padding="8,5"
+                                         KeyDown="LogInputBox_KeyDown"/>
+                                <Button Grid.Column="1"
+                                        Content="Send"
+                                        Style="{StaticResource PatriotBlueButton}"
+                                        Padding="14,5"
+                                        Margin="8,0,0,0"
+                                        Click="LogInputSend_Click"/>
+                            </Grid>
+                        </Grid>
                     </Border>
                 </Grid>
 
@@ -1083,6 +1153,48 @@
                     </Border>
                 </Grid>
 
+                <!-- VIEW 2.5: RUNNERS -->
+                <Grid x:Name="RunnersView" Visibility="Collapsed">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                        <TextBlock Text="Runners" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        <TextBlock Text="Click any runner to open its GitHub repository in your browser."
+                                   FontSize="13" Foreground="#94A3B8" Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <ItemsControl x:Name="RunnersDirectoryList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Button Tag="{Binding}"
+                                            Click="OpenRunnerGithub_Click"
+                                            HorizontalContentAlignment="Stretch"
+                                            Background="#212838"
+                                            BorderBrush="#2E3A52"
+                                            BorderThickness="1"
+                                            Padding="16,12"
+                                            Margin="0,0,0,10"
+                                            Cursor="Hand">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel Grid.Column="0">
+                                                <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                                <TextBlock Text="{Binding Notes}" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="Open GitHub ↗" FontSize="12.5" Foreground="#60A5FA" VerticalAlignment="Center"/>
+                                        </Grid>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+
                 <!-- VIEW 3: SETTINGS -->
                 <ScrollViewer x:Name="SettingsView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
                     <StackPanel MaxWidth="820" HorizontalAlignment="Left" Width="820" Margin="0,0,0,16">
@@ -1149,6 +1261,45 @@
                         </Border>
 
                         <!-- Launch Options: per-runner environment variables and extra arguments, saved automatically -->
+                        <!-- Custom Runner: GitHub URL without .git -->
+                        <Border x:Name="CustomRunnerCard"
+                                Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Margin="0,0,0,16">
+                            <StackPanel Margin="20,16,20,20">
+                                <TextBlock Text="Custom Runner" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Enter the GitHub repository URL without .git at the end. Example: https://github.com/Marvisak/VIctory"
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="CustomRunnerUrlBox"
+                                             Grid.Column="0"
+                                             Background="#131823"
+                                             Foreground="#F8FAFC"
+                                             CaretBrush="#F8FAFC"
+                                             BorderBrush="#2E3A52"
+                                             BorderThickness="1"
+                                             Padding="10,8"
+                                             FontSize="12.5"/>
+                                    <Button Grid.Column="1"
+                                            Content="Save"
+                                            Style="{StaticResource PatriotBlueButton}"
+                                            Margin="10,0,0,0"
+                                            Padding="18,8"
+                                            Click="CustomRunnerUrlSave_Click"/>
+                                </Grid>
+                                <TextBlock x:Name="CustomRunnerUrlStatusText"
+                                           FontSize="12"
+                                           Foreground="#94A3B8"
+                                           Margin="0,8,0,0"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Recommended settings: what each runner's own project recommends, per graphics card -->
                         <Border Background="#212838"
                                 BorderBrush="#2E3A52"
