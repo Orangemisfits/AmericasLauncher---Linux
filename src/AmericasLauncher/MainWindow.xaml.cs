@@ -597,7 +597,7 @@ public partial class MainWindow : Window
         FlushLaunchOptionsSave();
         LaunchEnvRows.ItemsSource = _envRows;
 
-        var installed = _profiles.Where(p => _runners.IsInstalled(p)).ToList();
+        var installed = _launchProfiles.Where(p => _runners.IsInstalled(p)).ToList();
         var requested = _launchOptionsTarget;
         _launchOptionsTarget = null;
         var target = installed.FirstOrDefault(p => p.Id == requested?.Id)
