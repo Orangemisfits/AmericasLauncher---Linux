@@ -28,7 +28,6 @@ public partial class MainWindow : Window
     private const int ToastSeconds = 15;
 
     private DispatcherTimer? _toastTimer;
-    private int _toastCountdown;
     private Process? _runningProcess;
     private Task<bool>? _gitAvailability;
     private bool _reportedMissingGit;
@@ -1496,7 +1495,8 @@ public partial class MainWindow : Window
 
     private async void BuildDlss_Click(object sender, RoutedEventArgs e)
     {
-        if (Selected is not { } profile || _busy) return;
+        if (Selected is not { } profile) return;
+        if (Progress.IsIndeterminate) return;
         if (!string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase)) return;
 
         var sourceDir = RunnerService.SourceDir(profile);
