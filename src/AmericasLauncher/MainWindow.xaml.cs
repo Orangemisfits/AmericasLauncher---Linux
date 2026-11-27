@@ -459,8 +459,32 @@ public partial class MainWindow : Window
             ? "The Nvidia runner is missing from runners.json."
             : installed ? $"Installed: {dir}" : "Not installed yet. Click Install first.";
         NvidiaInstallButton.IsEnabled = !_nvidiaBusy && NvidiaProfile != null;
-        foreach (var b in new[] { NvidiaSetGameButton, NvidiaFsrButton, NvidiaDlssButton, NvidiaFramegenButton, NvidiaPlayButton })
+        foreach (var b in new[] { NvidiaSetGameButton, NvidiaFsrButton, NvidiaDlssButton, NvidiaCheckButton })
             b.IsEnabled = installed && !_nvidiaBusy;
+        // The Play buttons need one click on "Set Game folder and exe" first; once done they stay open (even after updates).
+        foreach (var b in new[] { NvidiaFramegenButton, NvidiaPlayButton })
+        {
+            b.IsEnabled = installed && !_nvidiaBusy && _config.NvidiaGameSet;
+            b.ToolTip = _config.NvidiaGameSet ? b.ToolTip : "Click \"Set Game folder and exe\" first.";
+        }
+    }
+
+    private async void NvidiaCheck_Click(object sender, RoutedEventArgs e)
+    {
+        if (NvidiaProfile is not { } profile) return;
+        _nvidiaBusy = true;
+        UpdateNvidiaState();
+        NvidiaStatusText.Text = "Checking for updates...";
+        var st = await _runners.CheckForUpdateAsync(profile, default, sourceOnly: true);
+        _nvidiaBusy = false;
+        UpdateNvidiaState();
+        NvidiaStatusText.Text = st switch
+        {
+            UpdateStatus.UpToDate => "Up to date.",
+            UpdateStatus.UpdateAvailable => "An update is available. Click Install to update.",
+            UpdateStatus.NotInstalled => "Not installed yet. Click Install first.",
+            _ => "Could not check (offline or git missing)."
+        };
     }
 
     private async void NvidiaInstall_Click(object sender, RoutedEventArgs e)
@@ -493,6 +517,10 @@ public partial class MainWindow : Window
     {
         var dir = NvidiaDir;
         if (dir == null || !NvidiaInstalled) return;
+        MessageBox.Show(
+            "You do not need to set game_dir = 'C:\\gamefile' literally. Set the location of the folder the game is in (not the exe).\n\n" +
+            "Example: game_dir = 'D:\\Games\\MyGame'",
+            "Set Game folder and exe", MessageBoxButton.OK, MessageBoxImage.Information);
         try
         {
             var toml = Path.Combine(dir, "victory.toml");
@@ -508,6 +536,9 @@ public partial class MainWindow : Window
                 File.Copy(example, toml);
             }
             Process.Start(new ProcessStartInfo("notepad.exe", $"\"{toml}\"") { UseShellExecute = true });
+            _config.NvidiaGameSet = true;
+            _configService.Save(_config);
+            UpdateNvidiaState();
         }
         catch (Exception ex)
         {

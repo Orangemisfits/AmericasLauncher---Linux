@@ -947,6 +947,8 @@
                                 <WrapPanel>
                                     <Button x:Name="NvidiaInstallButton" Style="{StaticResource PatriotBlueButton}" Content="Install"
                                             Margin="0,0,10,8" ToolTip="Downloads the runner's repository with git (or updates it)." Click="NvidiaInstall_Click"/>
+                                    <Button x:Name="NvidiaCheckButton" Style="{StaticResource SecondaryButton}" Content="Check for updates"
+                                            Margin="0,0,10,8" ToolTip="Checks whether the runner has a newer version." Click="NvidiaCheck_Click"/>
                                     <Button x:Name="NvidiaSetGameButton" Style="{StaticResource SecondaryButton}" Content="Set Game folder and exe"
                                             Margin="0,0,10,8" ToolTip="Opens victory.toml (created from victory.example.toml if it does not exist) so you can set your game paths." Click="NvidiaSetGame_Click"/>
                                 </WrapPanel>
@@ -972,6 +974,8 @@
                                 <TextBlock Text="3. Play" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
                                 <TextBlock Text="Play with Framegen opens a menu in its command window where you pick a mode (1-6). The first start builds the runner, which takes a few minutes."
                                            FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                <TextBlock Text="Play unlocks after you click &quot;Set Game folder and exe&quot; once. Set the folder the game is in (not the exe)."
+                                           FontSize="12" Foreground="#FBBF24" TextWrapping="Wrap" Margin="0,0,0,10"/>
                                 <WrapPanel>
                                     <Button x:Name="NvidiaFramegenButton" Style="{StaticResource PatriotRedButton}" Content="Play with Framegen"
                                             Margin="0,0,10,8" ToolTip="Runs PLAY_FRAMEGEN.cmd" Click="NvidiaFramegen_Click"/>

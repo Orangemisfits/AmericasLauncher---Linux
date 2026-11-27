@@ -148,9 +148,10 @@ public sealed class RunnerService
     }
 
     /// <summary>Compares the installed revision with the remote default branch (needs internet).</summary>
-    public async Task<UpdateStatus> CheckForUpdateAsync(RunnerProfile p, CancellationToken ct = default)
+    public async Task<UpdateStatus> CheckForUpdateAsync(RunnerProfile p, CancellationToken ct = default, bool sourceOnly = false)
     {
-        if (!IsInstalled(p)) return UpdateStatus.NotInstalled;
+        // sourceOnly: runners without a built exe (Nvidia page) count as installed when the git clone exists.
+        if (sourceOnly ? !HasSource(p) : !IsInstalled(p)) return UpdateStatus.NotInstalled;
         try
         {
             using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
