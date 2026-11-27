@@ -30,6 +30,8 @@ public partial class MainWindow : Window
     private DispatcherTimer? _toastTimer;
     private int _toastCountdown;
     private Process? _runningProcess;
+    private Task<bool>? _gitAvailability;
+    private bool _reportedMissingGit;
 
     // Non-null from the moment Launch is clicked (pipeline included) until the game has exited or was stopped.
     private CancellationTokenSource? _launchCts;
@@ -928,6 +930,19 @@ public partial class MainWindow : Window
         if (profile.HealthState != before && Selected?.Id == profile.Id) UpdateRunnerLegendAndButtons(profile);
     }
 
+    private async Task<bool> CanCheckRunnerUpdatesAsync()
+    {
+        if (_gitAvailability is null || _gitAvailability.IsCompleted)
+            _gitAvailability = DependencyService.IsCommandAvailableAsync("git.exe");
+
+        var available = await _gitAvailability;
+        if (!available && !_reportedMissingGit)
+            Log("[!] Git is unavailable. Install Git or add it to PATH, then reopen AmericasLauncher to check for runner updates.");
+
+        _reportedMissingGit = !available;
+        return available;
+    }
+
     /// <summary>Shows the installed version and whether a newer one exists upstream.</summary>
     private async Task RefreshVersionAsync()
     {
@@ -942,6 +957,17 @@ public partial class MainWindow : Window
 
         try
         {
+            var gitAvailable = await CanCheckRunnerUpdatesAsync();
+            if (ticket != _refreshCounter) return;
+            if (!gitAvailable)
+            {
+                VersionText.Text = _runners.IsInstalled(profile)
+                    ? "Emulator version: " + (BuiltVersion(profile) ?? "unknown")
+                    : "Emulator version: not installed";
+                SetStatus("Git is unavailable", Brushes.LightSlateGray);
+                return;
+            }
+
             if (!_runners.IsInstalled(profile))
             {
                 var source = await _runners.GetSourceVersionAsync(profile);
@@ -1062,6 +1088,8 @@ public partial class MainWindow : Window
 
     private async Task CheckAllRunnersHealthAsync()
     {
+        if (!await CanCheckRunnerUpdatesAsync()) return;
+
         var tasks = _profiles.Select(async p =>
         {
             var state = await _runners.CheckHealthAsync(p);

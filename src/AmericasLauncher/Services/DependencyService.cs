@@ -24,14 +24,19 @@ public sealed class DependencyService
         if (d.Check.StartsWith("command:", StringComparison.Ordinal))
         {
             var command = d.Check["command:".Length..];
-            var code = await ProcessRunner.RunAsync("cmd.exe", $"/c where {command}", null, _ => { }, ct);
-            return code == 0;
+            return await IsCommandAvailableAsync(command, ct);
         }
 
         if (d.Check == "vsbuildtools")
             return await HasVcToolsAsync(ct);
 
         return false;
+    }
+
+    public static async Task<bool> IsCommandAvailableAsync(string command, CancellationToken ct = default)
+    {
+        var code = await ProcessRunner.RunAsync("where.exe", command, null, _ => { }, ct);
+        return code == 0;
     }
 
     private static string VsInstallerDir => Path.Combine(
