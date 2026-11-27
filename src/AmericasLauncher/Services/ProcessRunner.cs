@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 
 namespace AmericasLauncher.Services;
@@ -87,12 +88,17 @@ public static class ProcessRunner
     /// <summary>
     /// Runs a console process hidden with redirected stdin, stdout, and stderr.
     /// Calls <paramref name="setInputSender"/> with a line-sending delegate while running, and null when done.
+    /// Output is read as characters, not lines: a progress bar that only redraws one line with carriage
+    /// returns (curl's <c>--progress-bar</c>) shows up in the log as it moves (at most about once a second).
+    /// With <paramref name="closeInput"/> the process's input is closed right away: a <c>pause</c> or a prompt
+    /// then returns at once instead of waiting for a key nobody can press.
     /// </summary>
     public static async Task<int> RunInteractiveAsync(
         string fileName, string arguments, string? workingDirectory,
         Action<string> log, Action<Action<string>?> setInputSender,
         CancellationToken ct = default,
-        IReadOnlyDictionary<string, string?>? environment = null)
+        IReadOnlyDictionary<string, string?>? environment = null,
+        bool closeInput = false)
     {
         var psi = new ProcessStartInfo
         {
@@ -109,29 +115,38 @@ public static class ProcessRunner
         if (environment != null) LaunchOptionsService.Apply(psi.Environment, environment);
 
         using var process = new Process { StartInfo = psi };
-        process.OutputDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
-        process.ErrorDataReceived += (_, e) => { if (e.Data != null) log(e.Data); };
-
         process.Start();
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
 
-        setInputSender(text =>
+        var pumps = new[]
         {
-            try
+            Task.Run(() => PumpAsync(process.StandardOutput, log)),
+            Task.Run(() => PumpAsync(process.StandardError, log))
+        };
+
+        if (closeInput)
+        {
+            try { process.StandardInput.Close(); } catch { /* process may have exited */ }
+        }
+        else
+        {
+            setInputSender(text =>
             {
-                if (!process.HasExited)
+                try
                 {
-                    process.StandardInput.WriteLine(text);
-                    process.StandardInput.Flush();
+                    if (!process.HasExited)
+                    {
+                        process.StandardInput.WriteLine(text);
+                        process.StandardInput.Flush();
+                    }
                 }
-            }
-            catch { /* process may have exited */ }
-        });
+                catch { /* process may have exited */ }
+            });
+        }
 
         try
         {
             await process.WaitForExitAsync(ct);
+            await Task.WhenAny(Task.WhenAll(pumps), Task.Delay(2000, CancellationToken.None));   // drain what is left
         }
         catch (OperationCanceledException)
         {
@@ -140,8 +155,70 @@ public static class ProcessRunner
         }
         finally
         {
-            setInputSender(null);
+            if (!closeInput) setInputSender(null);
         }
         return process.ExitCode;
+    }
+
+    /// <summary>
+    /// Reads a process's output and passes it to <paramref name="log"/>: a line break ends a line;
+    /// a lone carriage return (a progress bar redrawing itself) is shown at most about once a second.
+    /// </summary>
+    private static async Task PumpAsync(StreamReader reader, Action<string> log)
+    {
+        var line = new StringBuilder();
+        var buffer = new char[1024];
+        var lastProgress = DateTime.MinValue;
+        var lastShown = "";
+        var pendingCr = false;
+
+        // curl's bar looks like "######      45.3%": shown as "download: 45.3%".
+        static string Tidy(string text)
+        {
+            text = text.Trim();
+            var m = System.Text.RegularExpressions.Regex.Match(text, @"^#+\s*([0-9.]+)%$");
+            return m.Success ? $"download: {m.Groups[1].Value}%" : text;
+        }
+
+        void Progress()
+        {
+            var text = Tidy(line.ToString());
+            line.Clear();
+            if (text.Length == 0 || text == lastShown) return;
+            if (DateTime.UtcNow - lastProgress < TimeSpan.FromSeconds(1)) return;
+            lastProgress = DateTime.UtcNow;
+            lastShown = text;
+            log("    " + text);
+        }
+
+        void EndLine()
+        {
+            log(Tidy(line.ToString()));
+            line.Clear();
+            lastShown = "";
+        }
+
+        try
+        {
+            int read;
+            while ((read = await reader.ReadAsync(buffer, 0, buffer.Length)) > 0)
+            {
+                for (var i = 0; i < read; i++)
+                {
+                    var c = buffer[i];
+                    if (pendingCr)
+                    {
+                        pendingCr = false;
+                        if (c == '\n') { EndLine(); continue; }   // "\r\n" is one ordinary line break
+                        Progress();                               // a lone "\r": the line is being redrawn
+                    }
+                    if (c == '\r') pendingCr = true;
+                    else if (c == '\n') EndLine();
+                    else line.Append(c);
+                }
+            }
+            if (line.Length > 0) log(Tidy(line.ToString()));
+        }
+        catch { /* the process ended */ }
     }
 }

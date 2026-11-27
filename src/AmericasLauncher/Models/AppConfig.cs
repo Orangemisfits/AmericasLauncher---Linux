@@ -30,6 +30,12 @@ public sealed class AppConfig
     /// <summary>Runner id -> "amd", "nvidia", or "off": the graphics card whose recommended settings are used.</summary>
     public Dictionary<string, string> RunnerGpu { get; set; } = new();
 
+    /// <summary>
+    /// "Nvidia - VIctory Based" / "Build or Launch with DLSS": the PLAY_FRAMEGEN.cmd mode passed on the command line.
+    /// "auto" (mode 2 on an RTX 20/30 card, else 1), "1" to "6", or "menu" (the runner's own menu, answered in the log input box).
+    /// </summary>
+    public string DlssMode { get; set; } = "auto";
+
     /// <summary>Runner id -> installed source revision (short git hash).</summary>
     public Dictionary<string, string> InstalledVersions { get; set; } = new();
 }

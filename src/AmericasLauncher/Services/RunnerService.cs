@@ -360,7 +360,7 @@ public sealed class RunnerService
 
         // 2) Build
         log($"=== Building {after} from the local source (this can take several minutes) ===");
-        var buildEnv = await AgilityService.BuildEnvironmentAsync(log, ct);
+        var buildEnv = await AgilityService.BuildEnvironmentAsync(log, dir, ct);
         var vcvars = await DependencyService.FindVcvars64Async(ct) ?? FindVcvars64();
         if (vcvars == null) log("[!!] vcvars64.bat was not found; the build may fail to find link.exe.");
         var buildScript = Path.Combine(Path.GetTempPath(), "AmericasLauncher-build.cmd");
@@ -380,7 +380,23 @@ public sealed class RunnerService
             lines.Add("exit /b %ERRORLEVEL%");
             await File.WriteAllLinesAsync(buildScript, lines, new System.Text.UTF8Encoding(false), ct);
 
-            var code = await ProcessRunner.RunAsync("cmd.exe", $"/d /c \"\"{buildScript}\"\"", dir, log, ct, buildEnv);
+            var duplicateSymbols = false;
+            void BuildLog(string line)
+            {
+                if (line.Contains("LNK2005", StringComparison.Ordinal) || line.Contains("LNK1169", StringComparison.Ordinal))
+                    duplicateSymbols = true;
+                log(line);
+            }
+
+            var code = await ProcessRunner.RunAsync("cmd.exe", $"/d /c \"\"{buildScript}\"\"", dir, BuildLog, ct, buildEnv);
+            if (code != 0 && duplicateSymbols && buildEnv != null)
+            {
+                // The runner already defines the Agility SDK symbols (its source was not recognised): link without
+                // the launcher's exports object and use the runner's own runtime version.
+                log("[!!] Duplicate D3D12SDKVersion / D3D12SDKPath symbols: the runner exports them itself. Building again without the launcher's exports.");
+                buildEnv = null;
+                code = await ProcessRunner.RunAsync("cmd.exe", $"/d /c \"\"{buildScript}\"\"", dir, log, ct, null);
+            }
             if (code != 0)
             {
                 log($"[!!] Command failed with exit code {code}.");

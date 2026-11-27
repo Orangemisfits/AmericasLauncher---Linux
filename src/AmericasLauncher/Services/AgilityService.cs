@@ -17,11 +17,12 @@ namespace AmericasLauncher.Services;
 /// <c>D3D12SDKPath</c> makes the system load a newer runtime, <c>D3D12\D3D12Core.dll</c> beside it,
 /// instead (the Agility SDK).
 ///
-/// No runner exports them, and the launcher does not change their source (its <c>git pull</c>
+/// Most runners do not export them, and the launcher does not change their source (its <c>git pull</c>
 /// would then fail): on Windows 10 the build links a small object that holds the two exports
 /// into the runner (<see cref="BuildEnvironmentAsync"/>), and the runtime is put beside the built
-/// executable (<see cref="EnsureRuntimeAsync"/>). Windows 11 has shader model 6.6 itself: nothing
-/// is done there.
+/// executable (<see cref="EnsureRuntimeAsync"/>). A runner that exports them itself (its own source defines
+/// <c>D3D12SDKVersion</c>) is left alone: no second copy is linked and its own runtime version
+/// (<c>get-d3d12</c>) is used. Windows 11 has shader model 6.6 itself: nothing is done there.
 /// </summary>
 public static class AgilityService
 {
@@ -80,9 +81,16 @@ public static class AgilityService
     /// as before and the runner keeps the system runtime).
     /// </summary>
     public static async Task<IReadOnlyDictionary<string, string?>?> BuildEnvironmentAsync(
-        Action<string> log, CancellationToken ct = default)
+        Action<string> log, string? sourceDir = null, CancellationToken ct = default)
     {
         if (!Needed) return null;
+        // A runner that defines and exports the two symbols itself (e.g. VIctory-NVIDIA since "Windows 10
+        // runtime") must not get a second copy linked in: that is LNK2005 / LNK1169 (multiply defined symbols).
+        if (sourceDir != null && SourceDefinesExports(sourceDir))
+        {
+            log("[ok] Windows 10: this runner exports the D3D12 Agility SDK symbols itself; the launcher adds nothing.");
+            return null;
+        }
         var obj = Path.Combine(WorkDir, $"agility-exports-{SdkVersion}.obj");
         if (!File.Exists(obj))
         {
@@ -119,6 +127,11 @@ public static class AgilityService
     public static async Task<bool> EnsureRuntimeAsync(string exePath, Action<string> log, CancellationToken ct = default)
     {
         if (!Needed) return true;
+        // A runner that brings its own exports also brings its own runtime version (e.g. 614): the launcher's
+        // 1.620.2 must not be put beside it. Only an exe that exports 620 (our object) gets ours.
+        var exported = ExportedSdkVersion(exePath);
+        if (exported is { } version && version != SdkVersion)
+            return await EnsureRunnerRuntimeAsync(exePath, log, ct);
         var target = Path.Combine(Path.GetDirectoryName(exePath)!, "D3D12");
         if (RuntimeDlls.All(d => File.Exists(Path.Combine(target, d)))) return true;
 
@@ -166,6 +179,108 @@ public static class AgilityService
         }
     }
 
+    /// <summary>
+    /// Whether the runner's own source defines <c>D3D12SDKVersion</c> (in code or in a <c>/EXPORT</c> link argument),
+    /// so the launcher must not link its own exports object as well.
+    /// </summary>
+    public static bool SourceDefinesExports(string sourceDir)
+    {
+        try
+        {
+            if (!Directory.Exists(sourceDir)) return false;
+            var skip = new[] { "target", ".git", "node_modules", "docs", "tests" };
+            var pending = new Stack<string>();
+            pending.Push(sourceDir);
+            while (pending.Count > 0)
+            {
+                var dir = pending.Pop();
+                foreach (var sub in Directory.EnumerateDirectories(dir))
+                {
+                    var name = Path.GetFileName(sub);
+                    if (!skip.Contains(name, StringComparer.OrdinalIgnoreCase)) pending.Push(sub);
+                }
+                foreach (var file in Directory.EnumerateFiles(dir))
+                {
+                    var ext = Path.GetExtension(file).ToLowerInvariant();
+                    if (ext is not (".rs" or ".c" or ".cc" or ".cpp" or ".h" or ".def")) continue;
+                    if (new FileInfo(file).Length > 4 * 1024 * 1024) continue;
+                    if (File.ReadAllText(file).Contains("D3D12SDKVersion", StringComparison.Ordinal)) return true;
+                }
+            }
+        }
+        catch
+        {
+            // unreadable source: treated as "no exports"; a failed link is then retried without our object (RunnerService)
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// The value of the exported <c>D3D12SDKVersion</c> of an executable (e.g. 614 or 620), or null when it
+    /// does not export it or the file cannot be read.
+    /// </summary>
+    public static int? ExportedSdkVersion(string exePath)
+    {
+        try
+        {
+            return ReadExportedUInt32(File.ReadAllBytes(exePath), "D3D12SDKVersion");
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Runs the runner's own <c>get-d3d12</c> command, which puts the runtime version that runner asks Windows
+    /// for into <c>D3D12\</c> beside the exe. Returns true when <c>D3D12\D3D12Core.dll</c> is there afterwards.
+    /// </summary>
+    public static async Task<bool> EnsureRunnerRuntimeAsync(string exePath, Action<string> log, CancellationToken ct = default)
+    {
+        var dir = Path.GetDirectoryName(exePath)!;
+        var core = Path.Combine(dir, "D3D12", "D3D12Core.dll");
+        if (File.Exists(core)) return true;
+        try
+        {
+            log("[..] Windows 10: the runner asks for its own D3D12 runtime version; running its 'get-d3d12'");
+            var code = await ProcessRunner.RunAsync(exePath, "get-d3d12", dir, log, ct);
+            if (code == 0 && File.Exists(core)) return true;
+            log("[!!] 'get-d3d12' did not finish. Run it yourself: " + exePath + " get-d3d12");
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception e)
+        {
+            log($"[!!] Could not run 'get-d3d12': {e.Message}");
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Copies the <c>D3D12\</c> runtime folder beside <paramref name="fromExe"/> to beside <paramref name="toExe"/> when the
+    /// target has none (a second copy of the runner, e.g. target\release next to target\diag). Nothing is
+    /// overwritten.
+    /// </summary>
+    public static void CopyRuntimeFolder(string fromExe, string toExe, Action<string> log)
+    {
+        try
+        {
+            var from = Path.Combine(Path.GetDirectoryName(fromExe)!, "D3D12");
+            var to = Path.Combine(Path.GetDirectoryName(toExe)!, "D3D12");
+            if (!File.Exists(Path.Combine(from, "D3D12Core.dll")) || File.Exists(Path.Combine(to, "D3D12Core.dll"))) return;
+            Directory.CreateDirectory(to);
+            foreach (var file in Directory.EnumerateFiles(from))
+                File.Copy(file, Path.Combine(to, Path.GetFileName(file)), overwrite: false);
+            log($"[ok] Windows 10: D3D12 runtime copied to {to}");
+        }
+        catch (Exception e)
+        {
+            log($"[!!] Could not copy the D3D12 runtime: {e.Message}");
+        }
+    }
+
     private static bool HashMatches(string path)
     {
         using var file = File.OpenRead(path);
@@ -187,6 +302,56 @@ public static class AgilityService
         {
             return false;
         }
+    }
+
+    /// <summary>The 32-bit value stored at an exported data symbol of a PE32+ image, or null.</summary>
+    internal static int? ReadExportedUInt32(byte[] image, string symbol)
+    {
+        int I32(int at) => BitConverter.ToInt32(image, at);
+        int U16(int at) => BitConverter.ToUInt16(image, at);
+        if (image.Length < 0x40 || U16(0) != 0x5A4D) return null;
+        var pe = I32(0x3C);
+        if (pe <= 0 || pe + 24 > image.Length || I32(pe) != 0x4550) return null;
+        var sections = U16(pe + 6);
+        var optionalSize = U16(pe + 20);
+        var optional = pe + 24;
+        if (U16(optional) != 0x20B) return null;
+        var exportRva = I32(optional + 112);
+        if (exportRva == 0) return null;
+
+        var table = optional + optionalSize;
+        int Offset(int rva)
+        {
+            for (var i = 0; i < sections; i++)
+            {
+                var s = table + i * 40;
+                var size = Math.Max(I32(s + 8), I32(s + 16));
+                var start = I32(s + 12);
+                if (rva >= start && rva < start + size) return rva - start + I32(s + 20);
+            }
+            return -1;
+        }
+
+        var directory = Offset(exportRva);
+        if (directory < 0) return null;
+        var functionCount = I32(directory + 20);
+        var nameCount = I32(directory + 24);
+        var functions = Offset(I32(directory + 28));
+        var namesAt = Offset(I32(directory + 32));
+        var ordinals = Offset(I32(directory + 36));
+        if (functions < 0 || namesAt < 0 || ordinals < 0 || nameCount < 0 || nameCount > 65536) return null;
+        for (var i = 0; i < nameCount; i++)
+        {
+            var at = Offset(I32(namesAt + i * 4));
+            if (at < 0) continue;
+            var end = Array.IndexOf(image, (byte)0, at);
+            if (end <= at || Encoding.ASCII.GetString(image, at, end - at) != symbol) continue;
+            var index = U16(ordinals + i * 2);
+            if (index >= functionCount) return null;
+            var data = Offset(I32(functions + index * 4));
+            return data < 0 || data + 4 > image.Length ? null : I32(data);
+        }
+        return null;
     }
 
     /// <summary>The names a PE32+ image exports.</summary>

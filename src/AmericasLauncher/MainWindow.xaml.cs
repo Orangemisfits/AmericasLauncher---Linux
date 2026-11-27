@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         UpdateMissingPathsBanner();
         UpdateConsoleState();
         UpdateGpuState();
+        UpdateDlssModeState();
         UpdateCustomDirBoxes();
         EnsureLogTimer();
 
@@ -101,6 +102,7 @@ public partial class MainWindow : Window
             }
             UpdateConsoleState();
             UpdateGpuState();
+            UpdateDlssModeState();
             UpdateRunnerLegendAndButtons(Selected);
             await RefreshVersionAsync();
         };
@@ -1149,6 +1151,7 @@ public partial class MainWindow : Window
         UpdateSourceButton.IsEnabled = !busy && !isBroken && !missingCustom;
         InstallButton.IsEnabled = !busy && !isBroken && !missingCustom;
         BuildDlssButton.IsEnabled = !busy;
+        DlssModeButton.IsEnabled = !busy;
         LaunchButton.IsEnabled = !busy && !missingCustom;
         RunnerBox.IsEnabled = !busy;
         Progress.IsIndeterminate = busy;
@@ -1164,6 +1167,7 @@ public partial class MainWindow : Window
         UpdateSourceButton.IsEnabled = !active && !isBroken && !missingCustom;
         InstallButton.IsEnabled = !active && !isBroken && !missingCustom;
         BuildDlssButton.IsEnabled = !active;
+        DlssModeButton.IsEnabled = !active;
         RunnerBox.IsEnabled = !active;
         Progress.IsIndeterminate = active;
     }
@@ -1260,6 +1264,7 @@ public partial class MainWindow : Window
             ? Visibility.Visible
             : Visibility.Collapsed;
         BuildDlssButton.IsEnabled = !Progress.IsIndeterminate;
+        UpdateDlssModeState();
     }
 
     private void BrowseFolder_Click(object sender, RoutedEventArgs e)
@@ -1407,19 +1412,33 @@ public partial class MainWindow : Window
 
         try
         {
-            // For Nvidia - VIctory Based: if play-victory.cmd exists in the runner folder, run it.
+            // For Nvidia - VIctory Based: if play-victory.cmd exists in the runner folder, run it, with the launcher's
+            // own game folder and launch options (the script has a game folder of its own and only uses
+            // VICTORY_GAME_DIR when it is already set).
             if (string.Equals(profile.Id, "nvidia", StringComparison.OrdinalIgnoreCase))
             {
                 var sourceDir = RunnerService.SourceDir(profile);
                 var playVictoryCmd = Path.Combine(sourceDir, "play-victory.cmd");
                 if (File.Exists(playVictoryCmd))
                 {
-                    Log("=== Running play-victory.cmd ===");
-                    var code = await ProcessRunner.RunInteractiveAsync(
-                        "cmd.exe", $"/c \"{playVictoryCmd}\"", sourceDir, Log, SetLogInputSender, cts.Token);
-                    Log($"play-victory.cmd exited with code {code}.");
-                    EndLaunch(cts);
-                    return;
+                    if (CanUsePlayVictory(sourceDir, exe, out var why))
+                    {
+                        var env = BuildScriptEnvironment(profile, sourceDir, exe, out var gameDir);
+                        Log("=== Running play-victory.cmd ===");
+                        Log($"Game folder (from the launcher): {gameDir}");
+                        var userOptions = _launchStore.Get(profile.Id);
+                        if (userOptions is { IsEmpty: false })
+                            Log($"Your launch options: {userOptions.Env.Count} environment variable(s) applied" +
+                                (string.IsNullOrWhiteSpace(userOptions.ExtraArgs) ? "" : "; extra arguments are not passed to the script"));
+                        if (SelectedConsoleMode != "s")
+                            Log("[!] play-victory.cmd always starts Xbox Series S: the console button is not applied to it.");
+                        var code = await ProcessRunner.RunInteractiveAsync(
+                            "cmd.exe", $"/c \"{playVictoryCmd}\"", sourceDir, Log, SetLogInputSender, cts.Token, env);
+                        Log($"play-victory.cmd exited with code {code}.");
+                        EndLaunch(cts);
+                        return;
+                    }
+                    Log($"[>] play-victory.cmd is not used: {why} Starting the runner directly with the launcher's settings.");
                 }
             }
 
@@ -1493,6 +1512,108 @@ public partial class MainWindow : Window
         _sendLogInput(text);
     }
 
+    // ---- Nvidia - VIctory Based: scripts of the runner ----
+
+    private const string GameExeName = "game_scarlett_master.exe";
+
+    /// <summary>
+    /// play-victory.cmd looks for game_scarlett_master.exe in VICTORY_GAME_DIR and starts its own release copy of the
+    /// runner (victory-3d-rtx-pareto-residency.exe or target\release\victory.exe). When either is not the case,
+    /// the launcher starts the runner it built itself instead.
+    /// </summary>
+    private static bool CanUsePlayVictory(string sourceDir, string gameExe, out string why)
+    {
+        if (!string.Equals(Path.GetFileName(gameExe), GameExeName, StringComparison.OrdinalIgnoreCase))
+        {
+            why = $"it only starts {GameExeName}, and the selected game exe is {Path.GetFileName(gameExe)}.";
+            return false;
+        }
+        if (!File.Exists(Path.Combine(sourceDir, "victory-3d-rtx-pareto-residency.exe")) &&
+            !File.Exists(Path.Combine(sourceDir, "target", "release", "victory.exe")))
+        {
+            why = "it needs the runner's release build (target\\release\\victory.exe), and the launcher builds target\\diag\\victory.exe.";
+            return false;
+        }
+        why = "";
+        return true;
+    }
+
+    /// <summary>
+    /// The environment for one of the runner's own scripts: the game folder chosen in the launcher
+    /// (<c>VICTORY_GAME_DIR</c>), the user's launch options, and the launcher's usual defaults.
+    /// A <c>VICTORY_GAME_DIR</c> in the user's own launch options still wins.
+    /// </summary>
+    private Dictionary<string, string?> BuildScriptEnvironment(
+        RunnerProfile profile, string sourceDir, string gameExe, out string gameDir)
+    {
+        gameDir = Path.GetDirectoryName(gameExe)!.TrimEnd('\\', '/');
+        var env = LaunchOptionsService.ResolveEnv(
+            _launchStore.Get(profile.Id), sourceDir, gameDir, gameExe, Log);
+        if (!env.ContainsKey("VICTORY_GAME_DIR")) env["VICTORY_GAME_DIR"] = gameDir;
+        else gameDir = env["VICTORY_GAME_DIR"] ?? gameDir;
+        if (!env.ContainsKey("VICTORY_NO_WATCHDOG")) env["VICTORY_NO_WATCHDOG"] = "1";
+        if (!string.IsNullOrWhiteSpace(RunnerService.CustomCacheRoot) && !env.ContainsKey("VICTORY_CACHE_DIR"))
+            env["VICTORY_CACHE_DIR"] = RunnerService.CustomCacheRoot;
+        return env;
+    }
+
+    private static readonly string[] DlssModes = ["auto", "1", "2", "3", "4", "5", "6", "menu"];
+
+    private string SelectedDlssMode => DlssModes.Contains(_config.DlssMode) ? _config.DlssMode : "auto";
+
+    private static string DlssModeDescription(string mode) => mode switch
+    {
+        "1" => "Series X 1440p, DLSS Quality, frame generation (recommended)",
+        "2" => "Series X 1440p, DLSS Quality, no frame generation",
+        "3" => "Series S, DLSS Quality, frame generation (faster, softer)",
+        "4" => "Series X 1440p, DLSS Performance, frame generation",
+        "5" => "EXTREME Series S: DLSS Performance, frame generation, big pools, High priority",
+        "6" => "EXTREME Series X: 1440p DLSS Performance, frame generation, big pools, High priority",
+        "menu" => "the runner's own menu (type your choice in the box under the log)",
+        _ => "chosen for your card: mode 2 on an RTX 20/30 card, else mode 1"
+    };
+
+    private void UpdateDlssModeState()
+    {
+        if (DlssModeButton == null) return;
+        var nvidia = Selected != null && string.Equals(Selected.Id, "nvidia", StringComparison.OrdinalIgnoreCase);
+        DlssModeButton.Visibility = nvidia ? Visibility.Visible : Visibility.Collapsed;
+        DlssModeButton.IsEnabled = !Progress.IsIndeterminate;
+        var mode = SelectedDlssMode;
+        DlssModeButton.Content = mode switch
+        {
+            "auto" => "Mode: Auto",
+            "menu" => "Mode: Menu",
+            _ => $"Mode {mode}"
+        };
+        DlssModeButton.ToolTip =
+            "Mode passed to PLAY_FRAMEGEN.cmd (click to change): " + DlssModeDescription(mode) + ".\n" +
+            "An RTX 20/30 card cannot use DLSS frame generation: use mode 2 (DLSS without frame generation) there.";
+    }
+
+    private void DlssMode_Click(object sender, RoutedEventArgs e)
+    {
+        var next = (Array.IndexOf(DlssModes, SelectedDlssMode) + 1) % DlssModes.Length;
+        _config.DlssMode = DlssModes[next];
+        _configService.Save(_config);
+        UpdateDlssModeState();
+    }
+
+    /// <summary>Whether the first NVIDIA card is an RTX 20 or 30 (no DLSS frame generation). False when unknown.</summary>
+    private static async Task<bool> IsRtx20Or30Async()
+    {
+        try
+        {
+            var names = await ProcessRunner.RunAndCaptureAsync(
+                "powershell", "-NoProfile -Command \"Get-CimInstance Win32_VideoController | ForEach-Object Name\"", null);
+            return System.Text.RegularExpressions.Regex.IsMatch(names, @"RTX\s*(20|30)\d\d");
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private async void BuildDlss_Click(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } profile) return;
@@ -1513,25 +1634,74 @@ public partial class MainWindow : Window
         SetBusy(true);
         try
         {
-            if (File.Exists(dlssCmd))
+            // The runner's scripts get the launcher's launch options; the game folder goes into game_dir.txt,
+            // which PLAY_FRAMEGEN's script reads (otherwise it searches every drive for the game).
+            var gameExe = string.IsNullOrWhiteSpace(_config.GameExe) ? "" : Path.GetFullPath(_config.GameExe);
+            var gameDir = gameExe.Length > 0 ? Path.GetDirectoryName(gameExe)!.TrimEnd('\\', '/') : "";
+            var env = LaunchOptionsService.ResolveEnv(_launchStore.Get(profile.Id), sourceDir, gameDir, gameExe, Log);
+            if (gameExe.Length == 0)
+            {
+                Log("[!] No game exe is selected in Settings: the runner's script will search the drives for the game.");
+            }
+            else if (string.Equals(Path.GetFileName(gameExe), GameExeName, StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var hint = Path.Combine(sourceDir, "game_dir.txt");
+                    var current = File.Exists(hint) ? File.ReadLines(hint).FirstOrDefault()?.Trim().Trim('"') : null;
+                    if (!string.Equals(current, gameDir, StringComparison.OrdinalIgnoreCase))
+                    {
+                        File.WriteAllText(hint, gameDir + Environment.NewLine, new System.Text.UTF8Encoding(false));
+                        Log($"Game folder for the runner's script: {gameDir}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log("[!] Could not write game_dir.txt: " + ex.Message);
+                }
+            }
+
+            // 1) NVIDIA's DLSS files, once. The script ends with 'pause': its input is closed, so it returns at once.
+            var sdkMarker = Path.Combine(sourceDir, "nvidia-sdk", "Streamline", "bin", "x64", "sl.interposer.dll");
+            if (File.Exists(dlssCmd) && !File.Exists(sdkMarker))
             {
                 Log("=== Running Get-NVIDIA-DLSS.cmd ===");
+                Log("[..] Downloading NVIDIA's DLSS files (about 70 MB, or 263 MB if the first source fails). The download percentage is shown below.");
                 var code1 = await ProcessRunner.RunInteractiveAsync(
-                    "cmd.exe", $"/c \"{dlssCmd}\"", sourceDir, Log, SetLogInputSender);
+                    "cmd.exe", $"/c \"{dlssCmd}\"", sourceDir, Log, SetLogInputSender, default, env, closeInput: true);
                 Log($"Get-NVIDIA-DLSS.cmd exited with code {code1}.");
-                Log("[>] Get-NVIDIA-DLSS.cmd finished. If it is waiting for input, type anything in the box below and press Enter to continue.");
+            }
+            else if (File.Exists(sdkMarker))
+            {
+                Log("[ok] NVIDIA's DLSS files are already downloaded.");
             }
             else
             {
                 Log("[!] Get-NVIDIA-DLSS.cmd not found in runner folder.");
             }
 
+            // 2) The mode is passed on the command line: the script's menu (choice /c ...) would wait for a key.
             if (File.Exists(framegenCmd))
             {
-                Log("=== Running PLAY_FRAMEGEN.cmd ===");
-                Log("Type your choice (e.g. 1-6) in the input box below and press Enter.");
+                var mode = SelectedDlssMode;
+                var rtx2030 = await IsRtx20Or30Async();
+                if (mode == "auto") mode = rtx2030 ? "2" : "1";
+                if (rtx2030 && mode != "2" && mode != "menu")
+                    Log("[!] RTX 20/30 cards cannot use DLSS frame generation. Mode 2 (DLSS without frame generation) is the one for this card.");
+
+                var releaseExe = Path.Combine(sourceDir, "target", "release", "victory.exe");
+                if (!File.Exists(releaseExe))
+                    Log("[>] First start: the script builds its own release copy of the runner (target\\release), which can take several minutes. " +
+                        "This is normal; the log shows the build.");
+                if (AgilityService.Needed)
+                    AgilityService.CopyRuntimeFolder(RunnerService.ExePath(profile), releaseExe, Log);
+
+                Log("=== Running PLAY_FRAMEGEN.cmd" + (mode == "menu" ? " ===" : $" {mode} ({DlssModeDescription(mode)}) ==="));
+                if (mode == "menu") Log("Type your choice (1-6, or Q) in the input box below and press Enter.");
+                else Log("When you have closed the game, press Enter in the input box to finish (the script ends with 'pause').");
+                var args = mode == "menu" ? "" : " " + mode;
                 var code2 = await ProcessRunner.RunInteractiveAsync(
-                    "cmd.exe", $"/c \"{framegenCmd}\"", sourceDir, Log, SetLogInputSender);
+                    "cmd.exe", $"/c \"\"{framegenCmd}\"{args}\"", sourceDir, Log, SetLogInputSender, default, env);
                 Log($"PLAY_FRAMEGEN.cmd exited with code {code2}.");
             }
             else
