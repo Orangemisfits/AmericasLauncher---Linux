@@ -589,6 +589,19 @@
                             </StackPanel>
                         </RadioButton>
 
+                        <!-- Nvidia - VIctory Based: a sub-page of Launch -->
+                        <RadioButton x:Name="NvidiaNavButton"
+                                     Style="{StaticResource NavRadioStyle}"
+                                     Margin="22,-2,0,4"
+                                     Height="38"
+                                     FontSize="13"
+                                     Checked="Nav_Checked">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="↳" Margin="0,0,8,0" VerticalAlignment="Center" Foreground="#64748B"/>
+                                <TextBlock Text="Nvidia - VIctory" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </RadioButton>
+
                         <!-- Port Status -->
                         <RadioButton x:Name="PortStatusNavButton"
                                      Style="{StaticResource NavRadioStyle}"
@@ -805,19 +818,6 @@
                                     Style="{StaticResource PatriotBlueButton}"
                                     Content="Install / Update"
                                     Click="Install_Click"/>
-                            <Button x:Name="DlssModeButton"
-                                    Style="{StaticResource PatriotBlueButton}"
-                                    Content="Mode: Auto"
-                                    Margin="10,0,0,0"
-                                    Visibility="Collapsed"
-                                    Click="DlssMode_Click"/>
-                            <Button x:Name="BuildDlssButton"
-                                    Style="{StaticResource PatriotRedButton}"
-                                    Content="⚡  Build or Launch with DLSS"
-                                    Margin="10,0,0,0"
-                                    Visibility="Collapsed"
-                                    ToolTip="Gets NVIDIA's DLSS files once (Get-NVIDIA-DLSS.cmd), then starts PLAY_FRAMEGEN.cmd with the mode chosen on the button to the left. The first start builds a release copy of the runner and can take several minutes."
-                                    Click="BuildDlss_Click"/>
                             <Button x:Name="LaunchButton"
                                     Style="{StaticResource PatriotRedButton}"
                                     Content="▶  Launch Game"
@@ -932,6 +932,61 @@
                         </Grid>
                     </Border>
                 </Grid>
+
+                <!-- VIEW: NVIDIA - VICTORY BASED (a sub-page of Launch; its own scripts open in their own command window) -->
+                <ScrollViewer x:Name="NvidiaView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Nvidia - VIctory Based" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
+                        <TextBlock Text="Best with Nvidia. This runner has its own scripts, so it has its own page. Every script opens in its own command window; nothing is written to the launcher log."
+                                   FontSize="12.5" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,16"/>
+
+                        <Border Background="#212838" BorderBrush="#2E3A52" BorderThickness="1" CornerRadius="12" Padding="20,16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="1. Get the runner" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock x:Name="NvidiaStatusText" Text="" FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                <WrapPanel>
+                                    <Button x:Name="NvidiaInstallButton" Style="{StaticResource PatriotBlueButton}" Content="Install"
+                                            Margin="0,0,10,8" ToolTip="Downloads the runner's repository with git (or updates it)." Click="NvidiaInstall_Click"/>
+                                    <Button x:Name="NvidiaSetGameButton" Style="{StaticResource SecondaryButton}" Content="Set Game folder and exe"
+                                            Margin="0,0,10,8" ToolTip="Opens victory.toml (created from victory.example.toml if it does not exist) so you can set your game paths." Click="NvidiaSetGame_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#212838" BorderBrush="#2E3A52" BorderThickness="1" CornerRadius="12" Padding="20,16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="2. Optional upscaling files (once)" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Get AMD FSR is for frame generation on cards without DLSS frame generation. Get NVIDIA DLSS is for DLSS and DLSS frame generation (RTX cards)."
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                <WrapPanel>
+                                    <Button x:Name="NvidiaFsrButton" Style="{StaticResource SecondaryButton}" Content="Get AMD FSR"
+                                            Margin="0,0,10,8" ToolTip="Runs Get-AMD-FSR.cmd" Click="NvidiaFsr_Click"/>
+                                    <Button x:Name="NvidiaDlssButton" Style="{StaticResource SecondaryButton}" Content="Get NVIDIA DLSS"
+                                            Margin="0,0,10,8" ToolTip="Runs Get-NVIDIA-DLSS.cmd" Click="NvidiaDlss_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#212838" BorderBrush="#2E3A52" BorderThickness="1" CornerRadius="12" Padding="20,16" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="3. Play" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Play with Framegen opens a menu in its command window where you pick a mode (1-6). The first start builds the runner, which takes a few minutes."
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                                <WrapPanel>
+                                    <Button x:Name="NvidiaFramegenButton" Style="{StaticResource PatriotRedButton}" Content="Play with Framegen"
+                                            Margin="0,0,10,8" ToolTip="Runs PLAY_FRAMEGEN.cmd" Click="NvidiaFramegen_Click"/>
+                                    <Button x:Name="NvidiaPlayButton" Style="{StaticResource PatriotRedButton}" Content="Play Normal"
+                                            Margin="0,0,10,8" ToolTip="Runs Play-VIctory.cmd" Click="NvidiaPlay_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="#0F2A1D" BorderBrush="#16A34A" BorderThickness="1" CornerRadius="10" Padding="14,10">
+                            <TextBlock Text="Tip: once you are inside the game, press F1 to open the game's own settings menu (DLSS, frame generation, frame rate cap and more)."
+                                       FontSize="12.5" FontWeight="SemiBold" Foreground="#86EFAC" TextWrapping="Wrap"/>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- VIEW 2: PORT STATUS -->
                 <Grid x:Name="PortStatusView" Visibility="Collapsed">
