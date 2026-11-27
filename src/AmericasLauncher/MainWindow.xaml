@@ -806,8 +806,8 @@
                                     Content="Install / Update"
                                     Click="Install_Click"/>
                             <Button x:Name="BuildDlssButton"
-                                    Style="{StaticResource PatriotBlueButton}"
-                                    Content="⚡  Build with DLSS"
+                                    Style="{StaticResource PatriotRedButton}"
+                                    Content="⚡  Build or Launch with DLSS"
                                     Margin="10,0,0,0"
                                     Visibility="Collapsed"
                                     ToolTip="Runs Get-NVIDIA-DLSS.cmd and PLAY_FRAMEGEN.cmd inside the Nvidia runner folder."

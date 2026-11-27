@@ -1519,6 +1519,7 @@ public partial class MainWindow : Window
                 var code1 = await ProcessRunner.RunInteractiveAsync(
                     "cmd.exe", $"/c \"{dlssCmd}\"", sourceDir, Log, SetLogInputSender);
                 Log($"Get-NVIDIA-DLSS.cmd exited with code {code1}.");
+                Log("[>] Get-NVIDIA-DLSS.cmd finished. If it is waiting for input, type anything in the box below and press Enter to continue.");
             }
             else
             {
