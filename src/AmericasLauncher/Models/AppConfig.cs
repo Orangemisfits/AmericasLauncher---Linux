@@ -6,7 +6,8 @@ public sealed class AppConfig
     public string GameFolder { get; set; } = "";
     public string GameExe { get; set; } = "";
     public string SelectedRunnerId { get; set; } = "xcl";
-    public bool UsePipeline { get; set; } = true;
+    /// <summary>Apply each runner's recommended settings when it starts (your own Launch Options win over them).</summary>
+    public bool UseRecommended { get; set; } = true;
     public bool AutoUpdate { get; set; } = false;
 
     /// <summary>
@@ -22,11 +23,8 @@ public sealed class AppConfig
     /// <summary>Runner id -> true when Xbox Series S is chosen (default is Series X).</summary>
     public Dictionary<string, bool> SeriesS { get; set; } = new();
 
-    /// <summary>Runner id -> per-runner pipeline toggle (default is true).</summary>
-    public Dictionary<string, bool> RunnerPipeline { get; set; } = new();
-
-    /// <summary>Runner id -> per-runner resolution (540p, 720p, 1080p, 2K, 4K).</summary>
-    public Dictionary<string, string> RunnerResolution { get; set; } = new();
+    /// <summary>Runner id -> "amd" or "nvidia": the graphics card whose recommended settings are used.</summary>
+    public Dictionary<string, string> RunnerGpu { get; set; } = new();
 
     /// <summary>Runner id -> installed source revision (short git hash).</summary>
     public Dictionary<string, string> InstalledVersions { get; set; } = new();

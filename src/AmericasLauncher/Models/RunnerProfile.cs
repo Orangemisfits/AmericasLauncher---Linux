@@ -26,6 +26,25 @@ public sealed class Dependency
     [JsonPropertyName("wingetOverride")] public string? WingetOverride { get; set; }
 }
 
+/// <summary>One recommended environment variable of a runner, with what it does.</summary>
+public sealed class RecommendedSetting
+{
+    [JsonPropertyName("name")] public string Name { get; set; } = "";
+    [JsonPropertyName("value")] public string Value { get; set; } = "";
+    [JsonPropertyName("desc")] public string Description { get; set; } = "";
+}
+
+/// <summary>The settings a runner's own project recommends for one kind of graphics card.</summary>
+public sealed class RecommendedPreset
+{
+    [JsonPropertyName("summary")] public string Summary { get; set; } = "";
+
+    /// <summary>Arguments added after the runner's own launch arguments.</summary>
+    [JsonPropertyName("args")] public string Args { get; set; } = "";
+
+    [JsonPropertyName("env")] public List<RecommendedSetting> Env { get; set; } = new();
+}
+
 public sealed class RunnerProfile : INotifyPropertyChanged
 {
     public event PropertyChangedEventHandler? PropertyChanged;
@@ -64,7 +83,16 @@ public sealed class RunnerProfile : INotifyPropertyChanged
     /// <summary>Path of the built executable, relative to the source folder.</summary>
     [JsonPropertyName("exe")] public string Exe { get; set; } = "";
 
-    [JsonPropertyName("preLaunchArgs")] public List<string> PreLaunchArgs { get; set; } = new();
+    /// <summary>Recommended settings by graphics card: "amd", "nvidia", or "both" when the project names no difference.</summary>
+    [JsonPropertyName("recommended")] public Dictionary<string, RecommendedPreset> Recommended { get; set; } = new();
+
+    /// <summary>The preset for the chosen graphics card ("amd" or "nvidia"); the "both" preset when there is no card-specific one.</summary>
+    public RecommendedPreset? PresetFor(string gpu) =>
+        Recommended.TryGetValue(gpu, out var p) ? p : Recommended.TryGetValue("both", out var b) ? b : null;
+
+    /// <summary>The card the runner is best with, from its "Best with ..." note; AMD when unknown.</summary>
+    [JsonIgnore] public string DefaultGpu =>
+        (Notes ?? "").Contains("Nvidia", StringComparison.OrdinalIgnoreCase) ? "nvidia" : "amd";
    
     /// <summary>Arguments for the built executable. Supports {gameFolder} and {gameExe}.</summary>
     [JsonPropertyName("launchArgs")] public string LaunchArgs { get; set; } = "";

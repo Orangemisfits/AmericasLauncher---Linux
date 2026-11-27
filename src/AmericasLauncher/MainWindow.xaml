@@ -175,8 +175,8 @@
             </Style.Triggers>
         </Style>
 
-        <!-- Pipeline Toggle Button -->
-        <Style x:Key="PipelineToggleStyle" TargetType="ToggleButton">
+        <!-- On/off switch button -->
+        <Style x:Key="SwitchToggleStyle" TargetType="ToggleButton">
             <Setter Property="Background" Value="#232B3B"/>
             <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="BorderBrush" Value="#3B4963"/>
@@ -185,7 +185,7 @@
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Padding" Value="14,10"/>
             <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Content" Value="Pipeline: OFF"/>
+            <Setter Property="Content" Value="OFF"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
@@ -202,14 +202,14 @@
                                 <Setter TargetName="Bd" Property="Background" Value="#1E3A8A"/>
                                 <Setter TargetName="Bd" Property="BorderBrush" Value="#3B82F6"/>
                                 <Setter Property="Foreground" Value="#FFFFFF"/>
-                                <Setter Property="Content" Value="Pipeline: ON"/>
+                                <Setter Property="Content" Value="ON"/>
                             </Trigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.9"/>
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="Bd" Property="Opacity" Value="0.45"/>
-                                <Setter Property="Content" Value="Pipeline: N/A"/>
+                                <Setter Property="Content" Value="N/A"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -732,14 +732,14 @@
                                             <ColumnDefinition Width="6"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
-                                        <ToggleButton x:Name="PipelineToggleButton"
-                                                      Grid.Column="0"
-                                                      Style="{StaticResource PipelineToggleStyle}"
-                                                      Height="30"
-                                                      FontSize="11"
-                                                      Padding="6,0"
-                                                      Checked="PipelineToggle_Changed"
-                                                      Unchecked="PipelineToggle_Changed"/>
+                                        <Button x:Name="GpuButton"
+                                                Grid.Column="0"
+                                                Style="{StaticResource PatriotBlueButton}"
+                                                Content="GPU: AMD"
+                                                Height="30"
+                                                FontSize="11"
+                                                Padding="6,0"
+                                                Click="Gpu_Click"/>
                                         <Button x:Name="ConsoleButton"
                                                 Grid.Column="2"
                                                 Style="{StaticResource PatriotBlueButton}"
@@ -748,32 +748,6 @@
                                                 FontSize="11"
                                                 Padding="6,0"
                                                 Click="Console_Click"/>
-                                    </Grid>
-                                    <Grid>
-                                        <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="*"/>
-                                        </Grid.ColumnDefinitions>
-                                        <TextBlock Grid.Column="0"
-                                                   Text="Resolution:"
-                                                   FontSize="11.5"
-                                                   Foreground="#94A3B8"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,8,0"/>
-                                        <ComboBox x:Name="ResolutionBox"
-                                                  Grid.Column="1"
-                                                  Style="{StaticResource ModernComboBox}"
-                                                  Height="40"
-                                                  FontSize="13"
-                                                  Padding="8,4"
-                                                  VerticalContentAlignment="Center"
-                                                  SelectionChanged="ResolutionBox_SelectionChanged">
-                                            <ComboBoxItem Content="540p"/>
-                                            <ComboBoxItem Content="720p"/>
-                                            <ComboBoxItem Content="1080p" IsSelected="True"/>
-                                            <ComboBoxItem Content="2K"/>
-                                            <ComboBoxItem Content="4K"/>
-                                        </ComboBox>
                                     </Grid>
                                 </StackPanel>
                             </Border>
@@ -851,23 +825,6 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Pipeline Long Wait Warning Banner -->
-                        <Border x:Name="PipelineWarningBanner"
-                                Background="#3B2308"
-                                BorderBrush="#D97706"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="14,9"
-                                Visibility="Collapsed">
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="⏳" FontSize="13" Foreground="#FCD34D" Margin="0,0,10,0" VerticalAlignment="Center"/>
-                                <TextBlock Text="Pipeline translation is ON — this will take a long time (several minutes on first run)."
-                                           FontSize="12.5"
-                                           FontWeight="SemiBold"
-                                           Foreground="#FCD34D"
-                                           VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Border>
                     </StackPanel>
 
                     <!-- Progress Bar (Paint green bar) -->
@@ -1192,6 +1149,31 @@
                         </Border>
 
                         <!-- Launch Options: per-runner environment variables and extra arguments, saved automatically -->
+                        <!-- Recommended settings: what each runner's own project recommends, per graphics card -->
+                        <Border Background="#212838"
+                                BorderBrush="#2E3A52"
+                                BorderThickness="1"
+                                CornerRadius="12"
+                                Margin="0,0,0,16">
+                            <StackPanel Margin="20,16,20,20">
+                                <TextBlock Text="Recommended Settings" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="Each runner's own project recommends settings for how to run the game. They are applied every time you launch. Your own Launch Options below win over them. Choose your graphics card with the GPU button on the Launch screen."
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                                <ToggleButton x:Name="UseRecommendedToggle"
+                                              Style="{StaticResource SwitchToggleStyle}"
+                                              Content="Recommended settings: ON"
+                                              HorizontalAlignment="Left"
+                                              Height="34" Padding="14,0"
+                                              Checked="UseRecommended_Changed"
+                                              Unchecked="UseRecommended_Changed"/>
+                                <TextBlock x:Name="RecommendedTitleText" FontSize="13" FontWeight="SemiBold" Foreground="#F8FAFC" Margin="0,14,0,6"/>
+                                <TextBox x:Name="RecommendedBodyText"
+                                         IsReadOnly="True" TextWrapping="Wrap" FontFamily="Consolas" FontSize="11.5"
+                                         Foreground="#CBD5E1" Background="#131823" BorderBrush="#2E3A52"
+                                         Padding="10,8" MaxHeight="260" VerticalScrollBarVisibility="Auto"/>
+                            </StackPanel>
+                        </Border>
+
                         <Border x:Name="LaunchOptionsCard"
                                 Background="#212838"
                                 BorderBrush="#2E3A52"
@@ -1504,7 +1486,7 @@
                                 </Grid.ColumnDefinitions>
                                 <ToggleButton x:Name="ReviewBeforeBuildToggle"
                                               Grid.Column="0"
-                                              Style="{StaticResource PipelineToggleStyle}"
+                                              Style="{StaticResource SwitchToggleStyle}"
                                               Content="Review Before Build: OFF"
                                               IsChecked="False"
                                               Checked="ReviewBeforeBuild_Changed"
@@ -1539,7 +1521,7 @@
                                         Click="CheckLauncherUpdate_Click"/>
                                 <ToggleButton x:Name="AutoUpdateToggle"
                                               Grid.Column="1"
-                                              Style="{StaticResource PipelineToggleStyle}"
+                                              Style="{StaticResource SwitchToggleStyle}"
                                               Content="Auto Update: OFF"
                                               IsChecked="False"
                                               Checked="AutoUpdate_Changed"

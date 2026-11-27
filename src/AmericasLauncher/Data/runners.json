@@ -27,7 +27,13 @@
     ],
     "exe": "target\\release\\xcl.exe",
     "launchArgs": "run \"{gameFolder}\"",
-    "notes": "Best with Both"
+    "notes": "Best with Both",
+    "recommended": {
+      "both": {
+        "summary": "No special settings are recommended by this project. The Series S/X button sets XCL_DEVICE_TYPE for you.",
+        "env": []
+      }
+    }
   },
   {
     "id": "VIctory-Belobug",
@@ -57,11 +63,105 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release -p victory"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with AMD"
+    "notes": "Best with AMD",
+    "recommended": {
+      "both": {
+        "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
+        "env": [
+          {
+            "name": "VICTORY_THIN",
+            "value": "1",
+            "desc": "Faster, newer GPU submission path. If the game misbehaves, turn it off (0)."
+          },
+          {
+            "name": "VICTORY_JOIN_PARTS",
+            "value": "8",
+            "desc": "Joins GPU work into bigger parts (8) to cut overhead."
+          },
+          {
+            "name": "VICTORY_UPLOAD_AHEAD",
+            "value": "1",
+            "desc": "Uploads data to the GPU ahead of time to avoid hitches."
+          },
+          {
+            "name": "VICTORY_TEXTURE_NO_WAIT",
+            "value": "1",
+            "desc": "Textures do not stall the frame while they stream in."
+          },
+          {
+            "name": "VICTORY_RELAY",
+            "value": "2",
+            "desc": "Faster command submission / copy handling from the fork's own play script."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY",
+            "value": "1",
+            "desc": "Faster command submission / copy handling from the fork's own play script."
+          },
+          {
+            "name": "VICTORY_JOIN_COPIES",
+            "value": "1",
+            "desc": "Merges copy commands."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path for GPU buffers."
+          },
+          {
+            "name": "VICTORY_CARD_REHASH_RUNS",
+            "value": "1",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_CARD_STEPS",
+            "value": "2",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_CARD_AWAKE",
+            "value": "1",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_INDIRECT_WINDOW",
+            "value": "1",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_INDIRECT_BATCH",
+            "value": "2",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_MAP_THREADS",
+            "value": "1",
+            "desc": "Memory-mapping thread count."
+          },
+          {
+            "name": "VICTORY_TITLE_PRIORITIES",
+            "value": "0",
+            "desc": "Leaves the game's own thread priorities alone."
+          },
+          {
+            "name": "VICTORY_SHOW_AFTER",
+            "value": "1",
+            "desc": "Presents frames after their work is submitted."
+          },
+          {
+            "name": "VICTORY_AMBIENT",
+            "value": "0.8",
+            "desc": "Estimated indirect light (0.8) so shaded areas are not black."
+          },
+          {
+            "name": "VICTORY_D3D12_DRED",
+            "value": "light",
+            "desc": "Light crash tracing in case the GPU driver resets."
+          }
+        ]
+      }
+    }
   },
   {
     "id": "Dexnom",
@@ -91,11 +191,47 @@
       "cargo +stable-x86_64-pc-windows-msvc build --locked --release -p victory --features diagnostics --bins"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Both"
+    "notes": "Best with Both",
+    "recommended": {
+      "amd": {
+        "summary": "DexNom 'Experimental RT' launch: ray tracing on, with local GPU memory, sparse texture mips and no upload-ahead. The FSR Quality 4K variant needs AMD's FSR 4.1.2 provider and a GPU that has it, so it is not forced; add VICTORY_FSR_4K and VICTORY_FIDELITYFX_DIR in Launch Options.",
+        "args": "--rt",
+        "env": [
+          {
+            "name": "VICTORY_LOCAL_GPU_INPUTS",
+            "value": "1",
+            "desc": "Keeps GPU inputs in local video memory (--local-gpu-memory)."
+          },
+          {
+            "name": "VICTORY_LEVELS_ON_DEMAND",
+            "value": "1",
+            "desc": "Requests sparse texture mips (--sparse-textures)."
+          },
+          {
+            "name": "VICTORY_UPLOAD_AHEAD",
+            "value": "0",
+            "desc": "No upload-ahead (--no-upload-ahead)."
+          }
+        ]
+      },
+      "nvidia": {
+        "summary": "DexNom's 'Experimental NVIDIA' launch: ray tracing off and the game's own display path, with an ambient-light fill instead of ray-traced light. NVIDIA gameplay is untested upstream.",
+        "args": "--no-rt",
+        "env": [
+          {
+            "name": "VICTORY_FSR_4K",
+            "value": "0",
+            "desc": "No PC FSR 4K upscaler (it is AMD's)."
+          },
+          {
+            "name": "VICTORY_AMBIENT_FALLBACK",
+            "value": "1",
+            "desc": "Lightweight ambient light so interiors are not black without ray tracing."
+          }
+        ]
+      }
+    }
   },
   {
     "id": "klbf-lab",
@@ -124,14 +260,78 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --cache --pipelines --jobs 8 \"{gameFolder}\\shaders.rpf\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with AMD"
+    "notes": "Best with AMD",
+    "recommended": {
+      "amd": {
+        "summary": "The play settings from the KLBF Lab README, plus the list of pipelines to skip that crash AMD's shader compiler. Their recommended Series S + FSR needs AMD's FidelityFX SDK (set VICTORY_FFX_DIR) and is not forced here. Use the Series S/X button.",
+        "env": [
+          {
+            "name": "VICTORY_SHADER_OPT",
+            "value": "0",
+            "desc": "Turns off the fork's shader clean-up passes, which crashed the AMD shader compiler."
+          },
+          {
+            "name": "VICTORY_LATE_WAIT",
+            "value": "1",
+            "desc": "Waits for GPU work later. If the device is lost about a minute after loading starts, try 0."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path for GPU buffers."
+          },
+          {
+            "name": "VICTORY_PIPELINE_WAIT_MS",
+            "value": "24",
+            "desc": "Time (ms) to wait for pipelines."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY_QUEUE",
+            "value": "0",
+            "desc": "Copy queue relay off."
+          },
+          {
+            "name": "VICTORY_SKIP_PIPELINES",
+            "value": "{file:docs\\klbf\\skip-amd.txt}",
+            "desc": "Skips the pipelines that crash AMD's shader compiler (list from the runner's own docs)."
+          }
+        ]
+      },
+      "nvidia": {
+        "summary": "The play settings from the KLBF Lab README (the AMD-only skip list is left out).",
+        "env": [
+          {
+            "name": "VICTORY_SHADER_OPT",
+            "value": "0",
+            "desc": "Turns off the fork's shader clean-up passes, which crashed the AMD shader compiler."
+          },
+          {
+            "name": "VICTORY_LATE_WAIT",
+            "value": "1",
+            "desc": "Waits for GPU work later. If the device is lost about a minute after loading starts, try 0."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path for GPU buffers."
+          },
+          {
+            "name": "VICTORY_PIPELINE_WAIT_MS",
+            "value": "24",
+            "desc": "Time (ms) to wait for pipelines."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY_QUEUE",
+            "value": "0",
+            "desc": "Copy queue relay off."
+          }
+        ]
+      }
+    }
   },
   {
-  "id": "VIctory-origin",
+    "id": "VIctory-origin",
     "name": "VIctory(Original)",
     "gitUrl": "https://github.com/Marvisak/VIctory.git",
     "dependencies": [
@@ -157,11 +357,14 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --cache --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Unknown"
+    "notes": "Best with Unknown",
+    "recommended": {
+      "both": {
+        "summary": "No special settings are recommended by this project: it runs with its defaults. Series S uses the PC upscaler only when VICTORY_FIDELITYFX_DIR is set.",
+        "env": []
+      }
+    }
   },
   {
     "id": "hyphenn",
@@ -190,11 +393,25 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Unknown"
+    "notes": "Best with Unknown",
+    "recommended": {
+      "both": {
+        "summary": "The two switches the fork's README names for its measured speeds: ray-tracing structure builder off (it drops the frame rate to 0.2-3 fps) and the texture pass on its own thread. Tested by the author on an RTX 4070 with Series X; Series S showed a black picture in their test.",
+        "env": [
+          {
+            "name": "VICTORY_BVH_BUILDER",
+            "value": "0",
+            "desc": "Ray-tracing structure builder off: much faster, but areas the sun does not hit are dark."
+          },
+          {
+            "name": "VICTORY_HEAP_WORKER",
+            "value": "1",
+            "desc": "Texture pass on its own thread (about 6.2-6.7 fps without it, 8-9 with)."
+          }
+        ]
+      }
+    }
   },
   {
     "id": "avatarmanz",
@@ -223,11 +440,105 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with AMD"
+    "notes": "Best with AMD",
+    "recommended": {
+      "both": {
+        "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
+        "env": [
+          {
+            "name": "VICTORY_THIN",
+            "value": "1",
+            "desc": "Faster, newer GPU submission path. If the game misbehaves, turn it off (0)."
+          },
+          {
+            "name": "VICTORY_JOIN_PARTS",
+            "value": "8",
+            "desc": "Joins GPU work into bigger parts (8) to cut overhead."
+          },
+          {
+            "name": "VICTORY_UPLOAD_AHEAD",
+            "value": "1",
+            "desc": "Uploads data to the GPU ahead of time to avoid hitches."
+          },
+          {
+            "name": "VICTORY_TEXTURE_NO_WAIT",
+            "value": "1",
+            "desc": "Textures do not stall the frame while they stream in."
+          },
+          {
+            "name": "VICTORY_RELAY",
+            "value": "2",
+            "desc": "Faster command submission / copy handling from the fork's own play script."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY",
+            "value": "1",
+            "desc": "Faster command submission / copy handling from the fork's own play script."
+          },
+          {
+            "name": "VICTORY_JOIN_COPIES",
+            "value": "1",
+            "desc": "Merges copy commands."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path for GPU buffers."
+          },
+          {
+            "name": "VICTORY_CARD_REHASH_RUNS",
+            "value": "1",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_CARD_STEPS",
+            "value": "2",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_CARD_AWAKE",
+            "value": "1",
+            "desc": "GPU-side change tracking tuning."
+          },
+          {
+            "name": "VICTORY_INDIRECT_WINDOW",
+            "value": "1",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_INDIRECT_BATCH",
+            "value": "2",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_MAP_THREADS",
+            "value": "1",
+            "desc": "Memory-mapping thread count."
+          },
+          {
+            "name": "VICTORY_TITLE_PRIORITIES",
+            "value": "0",
+            "desc": "Leaves the game's own thread priorities alone."
+          },
+          {
+            "name": "VICTORY_SHOW_AFTER",
+            "value": "1",
+            "desc": "Presents frames after their work is submitted."
+          },
+          {
+            "name": "VICTORY_AMBIENT",
+            "value": "0.8",
+            "desc": "Estimated indirect light (0.8) so shaded areas are not black."
+          },
+          {
+            "name": "VICTORY_D3D12_DRED",
+            "value": "light",
+            "desc": "Light crash tracing in case the GPU driver resets."
+          }
+        ]
+      }
+    }
   },
   {
     "id": "nvidia",
@@ -256,11 +567,220 @@
       "cargo build --locked --profile diag -p victory --features diagnostics"
     ],
     "exe": "target\\diag\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Nvidia"
+    "notes": "Best with Nvidia",
+    "recommended": {
+      "both": {
+        "summary": "The settings from the fork's scripts\\play-foxhound.ps1 (tested on an RTX 4070 SUPER), Series X at 2560x1440. DLSS needs NVIDIA's files (Get-NVIDIA-DLSS.cmd in the runner folder) and is not turned on here.",
+        "env": [
+          {
+            "name": "VICTORY_THIN",
+            "value": "1",
+            "desc": "Faster GPU submission path."
+          },
+          {
+            "name": "VICTORY_JOIN_PARTS",
+            "value": "8",
+            "desc": "Joins GPU work into bigger parts."
+          },
+          {
+            "name": "VICTORY_RELAY",
+            "value": "2",
+            "desc": "Command relay."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY",
+            "value": "1",
+            "desc": "Command relay for copies."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path."
+          },
+          {
+            "name": "VICTORY_CARD_REHASH_RUNS",
+            "value": "1",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_JOIN_COPIES",
+            "value": "1",
+            "desc": "Merges copy commands."
+          },
+          {
+            "name": "VICTORY_CARD_STEPS",
+            "value": "2",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_CARD_AWAKE",
+            "value": "1",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_CARD_BUFFERS_MIN_KB",
+            "value": "64",
+            "desc": "Smallest buffer the change tracking watches (KB)."
+          },
+          {
+            "name": "VICTORY_INDIRECT_WINDOW",
+            "value": "1",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_INDIRECT_BATCH",
+            "value": "2",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_UPLOAD_AHEAD",
+            "value": "1",
+            "desc": "Uploads data ahead of time."
+          },
+          {
+            "name": "VICTORY_SHOW_AFTER",
+            "value": "1",
+            "desc": "Presents frames after their work is submitted."
+          },
+          {
+            "name": "VICTORY_MAP_THREADS",
+            "value": "1",
+            "desc": "Memory-mapping thread count."
+          },
+          {
+            "name": "VICTORY_WC_NO_BACK",
+            "value": "1",
+            "desc": "Shader writes into big write-combined copies stay on the card (about 5 ms faster per frame)."
+          },
+          {
+            "name": "VICTORY_WC_NO_BACK_MIN_KB",
+            "value": "1024",
+            "desc": "Size from which the above applies (KB)."
+          },
+          {
+            "name": "VICTORY_SOFT_VIEWS",
+            "value": "copies",
+            "desc": "Page-mapping copies kept without Windows views (no cutscene freezes at scene cuts)."
+          },
+          {
+            "name": "VICTORY_TEXTURE_POOL",
+            "value": "1",
+            "desc": "Texture pool."
+          },
+          {
+            "name": "VICTORY_RIPE_BLOCKS",
+            "value": "0",
+            "desc": "No texture blocks made ahead."
+          },
+          {
+            "name": "VICTORY_TEXTURE_NO_WAIT",
+            "value": "1",
+            "desc": "Textures do not stall the frame."
+          },
+          {
+            "name": "VICTORY_TEXTURE_CATCHUP",
+            "value": "0",
+            "desc": "No texture catch-up pass."
+          },
+          {
+            "name": "VICTORY_TEXTURE_STAGE_MS",
+            "value": "16",
+            "desc": "Texture pass time slice (16 ms)."
+          },
+          {
+            "name": "VICTORY_LEVELS_ON_DEMAND",
+            "value": "0",
+            "desc": "Texture levels not on demand (sharper textures)."
+          },
+          {
+            "name": "VICTORY_PRELUDE_UPLOADS",
+            "value": "1",
+            "desc": "Uploads in the frame prelude."
+          },
+          {
+            "name": "VICTORY_SHOW_NEW_LATER",
+            "value": "1",
+            "desc": "Shows new textures a little later."
+          },
+          {
+            "name": "VICTORY_POOL_SMALL",
+            "value": "0",
+            "desc": "Small-texture pool off."
+          },
+          {
+            "name": "VICTORY_TABLED_REREAD",
+            "value": "1",
+            "desc": "Re-reads descriptor tables."
+          },
+          {
+            "name": "VICTORY_QUEUE_HOST_TEXTURES",
+            "value": "0",
+            "desc": "Host textures not queued."
+          },
+          {
+            "name": "VICTORY_HEAP_SYNC_FIRST",
+            "value": "1",
+            "desc": "Descriptor heap records: sync first."
+          },
+          {
+            "name": "VICTORY_SYNC_IN_PLACE",
+            "value": "1",
+            "desc": "Descriptor heap records: sync in place."
+          },
+          {
+            "name": "VICTORY_SPANS_QUICK",
+            "value": "1",
+            "desc": "Descriptor heap records: quick spans."
+          },
+          {
+            "name": "VICTORY_SYNC_FINE",
+            "value": "1",
+            "desc": "Descriptor heap records: fine sync."
+          },
+          {
+            "name": "VICTORY_HEAP_SYNC_AT_SUBMIT",
+            "value": "1",
+            "desc": "Descriptor heap records: sync at submit."
+          },
+          {
+            "name": "VICTORY_AMBIENT",
+            "value": "0.8",
+            "desc": "Estimated indirect light so shaded areas are not black."
+          },
+          {
+            "name": "VICTORY_AMBIENT_AIR",
+            "value": "1.5",
+            "desc": "Strength of the light in the air."
+          },
+          {
+            "name": "VICTORY_AMBIENT_SPECULAR",
+            "value": "1",
+            "desc": "Estimated reflections."
+          },
+          {
+            "name": "VICTORY_EARLY_DEPTH",
+            "value": "1",
+            "desc": "Keeps the console's early depth test."
+          },
+          {
+            "name": "VICTORY_LEAVE_OUT",
+            "value": "02384a60fda6f2d0,731a39171b568298",
+            "desc": "Leaves out the decal heap defragmentation (5.6 ms GPU per frame) and the heat-haze pass (smeared blocks)."
+          },
+          {
+            "name": "VICTORY_PIPELINE_BOOK",
+            "value": "1",
+            "desc": "Writes down the pipelines the game makes, so they can be prepared ahead."
+          },
+          {
+            "name": "VICTORY_NATIVE_1440P",
+            "value": "1",
+            "desc": "Series X profile at 2560x1440 (the fork's default)."
+          }
+        ]
+      }
+    }
   },
   {
     "id": "cgbj",
@@ -289,10 +809,149 @@
       "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
     ],
     "exe": "target\\release\\victory.exe",
-    "preLaunchArgs": [
-      "translate --pipelines \"{gameFolder}\\shaders.rpf\" \"{gameExe}\" \"{gameFolder}\\XboxBvhBuilder.dll\" \"{gameFolder}\\amd_fidelityfx_upscaler_xbox.dll\""
-    ],
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with Nvidia"
+    "notes": "Best with Nvidia",
+    "recommended": {
+      "both": {
+        "summary": "The settings from the runner's own Play-VIctory.cmd (pareto residency). The author's launcher uses Series S: use the Series S/X button. Same for AMD and Nvidia.",
+        "env": [
+          {
+            "name": "VICTORY_AMBIENT_AIR",
+            "value": "1.5",
+            "desc": "Strength of the light in the air."
+          },
+          {
+            "name": "VICTORY_TEXTURE_NO_WAIT",
+            "value": "1",
+            "desc": "Textures do not stall the frame."
+          },
+          {
+            "name": "VICTORY_RELAY",
+            "value": "2",
+            "desc": "Command relay."
+          },
+          {
+            "name": "VICTORY_WIDE_BACK",
+            "value": "1",
+            "desc": "Wider write-back path."
+          },
+          {
+            "name": "VICTORY_CARD_REHASH_RUNS",
+            "value": "1",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_JOIN_COPIES",
+            "value": "1",
+            "desc": "Merges copy commands."
+          },
+          {
+            "name": "VICTORY_INDIRECT_WINDOW",
+            "value": "1",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_RELAY_COPY",
+            "value": "1",
+            "desc": "Command relay for copies."
+          },
+          {
+            "name": "VICTORY_CARD_STEPS",
+            "value": "2",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_INDIRECT_BATCH",
+            "value": "2",
+            "desc": "Batches indirect draws."
+          },
+          {
+            "name": "VICTORY_MAP_THREADS",
+            "value": "1",
+            "desc": "Memory-mapping thread count."
+          },
+          {
+            "name": "VICTORY_CARD_AWAKE",
+            "value": "1",
+            "desc": "GPU-side change tracking."
+          },
+          {
+            "name": "VICTORY_SHOW_AFTER",
+            "value": "1",
+            "desc": "Presents frames after their work is submitted."
+          },
+          {
+            "name": "VICTORY_AMBIENT",
+            "value": "constant:0.8",
+            "desc": "Even constant light (0.8) instead of a per-frame estimate, which washed the frame out in bright doorways."
+          },
+          {
+            "name": "VICTORY_TEXTURE_GUARD",
+            "value": "0",
+            "desc": "Texture write guard off."
+          },
+          {
+            "name": "VICTORY_THIN",
+            "value": "0",
+            "desc": "Asynchronous submission off on NVIDIA (head skin was not drawn with it)."
+          },
+          {
+            "name": "VICTORY_JOIN_PARTS",
+            "value": "0",
+            "desc": "Off on NVIDIA (repeated frames of the opening video)."
+          },
+          {
+            "name": "VICTORY_PORT_GUARD",
+            "value": "1",
+            "desc": "Renderer port: write-guard lock sharing (saves 2-5 ms per frame)."
+          },
+          {
+            "name": "VICTORY_PORT_JOURNAL",
+            "value": "1",
+            "desc": "Renderer port: journal split (saves 2-5 ms per frame)."
+          },
+          {
+            "name": "VICTORY_PORT_CONSTANTS",
+            "value": "0",
+            "desc": "Renderer port 5 stays off (can raise a C++ exception)."
+          },
+          {
+            "name": "VICTORY_PORT_CBV",
+            "value": "0",
+            "desc": "Renderer port 1 stays off (can drop road surfaces on 8 GB NVIDIA cards)."
+          },
+          {
+            "name": "VICTORY_LIBRARY_STORE_LATER",
+            "value": "1",
+            "desc": "Saves the pipeline library later (no 200 ms hitches)."
+          },
+          {
+            "name": "VICTORY_PIPELINE_WAIT_MS",
+            "value": "0",
+            "desc": "No pipeline wait (removes 500 ms frame stalls)."
+          },
+          {
+            "name": "VICTORY_UPLOAD_AHEAD",
+            "value": "1",
+            "desc": "Uploads data ahead of time."
+          },
+          {
+            "name": "VICTORY_LEVELS_ON_DEMAND",
+            "value": "1",
+            "desc": "Texture levels on demand."
+          },
+          {
+            "name": "VICTORY_CARD_BUFFERS_MIN_KB",
+            "value": "64",
+            "desc": "Smallest buffer the change tracking watches (KB)."
+          },
+          {
+            "name": "VICTORY_LOG",
+            "value": "warn",
+            "desc": "Only warnings in the log (smaller, faster log)."
+          }
+        ]
+      }
+    }
   }
 ]

@@ -69,9 +69,8 @@ public sealed class LauncherUpdateService
         string? downloadUrl = null;
         if (root.TryGetProperty("assets", out var assetsEl) && assetsEl.ValueKind == JsonValueKind.Array)
         {
-            // Pick the platform-specific zip. Since v1.7.0 releases contain both win-x64 and linux-x64
-            // zips; always prefer the one matching the current OS to avoid downloading the wrong binary.
-            var platformSuffix = OperatingSystem.IsWindows() ? "win-x64" : "linux-x64";
+            // Releases are Windows-only: pick the win-x64 zip.
+            var platformSuffix = "win-x64";
             foreach (var asset in assetsEl.EnumerateArray())
             {
                 var name = asset.TryGetProperty("name", out var nEl) ? nEl.GetString() ?? "" : "";

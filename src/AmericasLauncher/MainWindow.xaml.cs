@@ -33,7 +33,7 @@ public partial class MainWindow : Window
     private Task<bool>? _gitAvailability;
     private bool _reportedMissingGit;
 
-    // Non-null from the moment Launch is clicked (pipeline included) until the game has exited or was stopped.
+    // Non-null from the moment Launch is clicked  until the game has exited or was stopped.
     private CancellationTokenSource? _launchCts;
     private RunnerProfile? _launchProfile;
 
@@ -61,13 +61,14 @@ public partial class MainWindow : Window
         GameFolderBox.Text = _config.GameFolder;
         GameExeBox.Text = _config.GameExe;
         AutoUpdateToggle.IsChecked = _config.AutoUpdate;
+        UseRecommendedToggle.IsChecked = _config.UseRecommended;
+        UseRecommendedToggle.Content = _config.UseRecommended ? "Recommended settings: ON" : "Recommended settings: OFF";
         AutoUpdateToggle.Content = _config.AutoUpdate ? "Auto Update: ON" : "Auto Update: OFF";
         ReviewBeforeBuildToggle.IsChecked = _config.ReviewBeforeBuild;
         ApplyReviewBeforeBuild();
         UpdateMissingPathsBanner();
-        UpdatePipelineState();
         UpdateConsoleState();
-        UpdateResolutionState();
+        UpdateGpuState();
         UpdateCustomDirBoxes();
         EnsureLogTimer();
 
@@ -92,9 +93,8 @@ public partial class MainWindow : Window
                 _config.SelectedRunnerId = profile.Id;
                 _configService.Save(_config);
             }
-            UpdatePipelineState();
             UpdateConsoleState();
-            UpdateResolutionState();
+            UpdateGpuState();
             UpdateRunnerLegendAndButtons(Selected);
             await RefreshVersionAsync();
         };
@@ -169,54 +169,69 @@ public partial class MainWindow : Window
         MissingPathsBanner.Visibility = missing ? Visibility.Visible : Visibility.Collapsed;
     }
 
-    private bool PipelineSelected => Selected != null &&
-        (_config.RunnerPipeline.TryGetValue(Selected.Id, out var p) ? p : _config.UsePipeline);
+    /// <summary>"amd" or "nvidia": the graphics card whose recommended settings are used for the selected runner.</summary>
+    private string SelectedGpu => Selected == null ? "amd" :
+        _config.RunnerGpu.TryGetValue(Selected.Id, out var g) && (g == "amd" || g == "nvidia") ? g : Selected.DefaultGpu;
 
-    private void UpdatePipelineState()
+    private void UpdateGpuState()
     {
-        if (PipelineToggleButton == null || PipelineWarningBanner == null) return;
-        var supportsPipeline = Selected is { PreLaunchArgs.Count: > 0 };
-        PipelineToggleButton.IsEnabled = supportsPipeline;
-        PipelineToggleButton.IsChecked = PipelineSelected;
-        var showWarning = supportsPipeline && PipelineToggleButton.IsChecked == true;
-        PipelineWarningBanner.Visibility = showWarning ? Visibility.Visible : Visibility.Collapsed;
+        if (GpuButton == null) return;
+        GpuButton.IsEnabled = Selected != null;
+        GpuButton.Content = SelectedGpu == "nvidia" ? "GPU: Nvidia" : "GPU: AMD";
+        GpuButton.ToolTip = "Choose your graphics card. The runner's recommended settings for that card are used.";
+        UpdateRecommendedText();
     }
 
-    private void PipelineToggle_Changed(object sender, RoutedEventArgs e)
+    private void Gpu_Click(object sender, RoutedEventArgs e)
     {
-        if (PipelineToggleButton == null || Selected == null) return;
-        var enabled = PipelineToggleButton.IsChecked == true;
-        _config.RunnerPipeline[Selected.Id] = enabled;
-        _config.UsePipeline = enabled;
+        if (Selected == null) return;
+        _config.RunnerGpu[Selected.Id] = SelectedGpu == "nvidia" ? "amd" : "nvidia";
         _configService.Save(_config);
-        UpdatePipelineState();
+        UpdateGpuState();
     }
 
-    private string SelectedResolution => Selected != null &&
-        _config.RunnerResolution.TryGetValue(Selected.Id, out var r) && !string.IsNullOrWhiteSpace(r) ? r : "1080p";
-
-    private void UpdateResolutionState()
+    private void UseRecommended_Changed(object sender, RoutedEventArgs e)
     {
-        if (ResolutionBox == null) return;
-        var res = SelectedResolution;
-        foreach (System.Windows.Controls.ComboBoxItem item in ResolutionBox.Items)
-        {
-            if (string.Equals(item.Content?.ToString(), res, StringComparison.OrdinalIgnoreCase))
-            {
-                ResolutionBox.SelectedItem = item;
-                break;
-            }
-        }
+        if (UseRecommendedToggle == null) return;
+        _config.UseRecommended = UseRecommendedToggle.IsChecked == true;
+        UseRecommendedToggle.Content = _config.UseRecommended ? "Recommended settings: ON" : "Recommended settings: OFF";
+        _configService.Save(_config);
     }
 
-    private void ResolutionBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    /// <summary>Settings > Recommended Settings: what the selected runner's project recommends, and what each setting does.</summary>
+    private void UpdateRecommendedText()
     {
-        if (ResolutionBox?.SelectedItem is System.Windows.Controls.ComboBoxItem item && Selected != null)
+        if (RecommendedTitleText == null || RecommendedBodyText == null) return;
+        if (Selected is not { } profile)
         {
-            var res = item.Content?.ToString() ?? "1080p";
-            _config.RunnerResolution[Selected.Id] = res;
-            _configService.Save(_config);
+            RecommendedTitleText.Text = "";
+            RecommendedBodyText.Text = "";
+            return;
         }
+
+        var gpu = SelectedGpu;
+        RecommendedTitleText.Text = $"{profile.Name} — {(gpu == "nvidia" ? "Nvidia" : "AMD")}";
+        var preset = profile.PresetFor(gpu);
+        if (preset == null)
+        {
+            RecommendedBodyText.Text = "This runner has no recommended settings.";
+            return;
+        }
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine(preset.Summary);
+        if (!string.IsNullOrWhiteSpace(preset.Args)) sb.AppendLine().AppendLine($"Arguments: {preset.Args}");
+        if (preset.Env.Count == 0)
+        {
+            sb.AppendLine().Append("Environment variables: none.");
+        }
+        else
+        {
+            sb.AppendLine().AppendLine("Environment variables:");
+            foreach (var e in preset.Env)
+                sb.AppendLine($"  {e.Name} = {e.Value}").AppendLine($"      {e.Description}");
+        }
+        RecommendedBodyText.Text = sb.ToString().TrimEnd();
     }
 
     private void UpdateCustomDirBoxes()
@@ -919,13 +934,15 @@ public partial class MainWindow : Window
     /// launch-options gear). Only the installed / not installed change is made: any other state the
     /// startup health check set (an update, a broken repository) is left as it is.
     /// </summary>
-    private void SyncCardInstallState(RunnerProfile profile, bool installed, bool updateAvailable = false)
+    private void SyncCardInstallState(RunnerProfile profile, bool installed, bool updateAvailable = false, bool checkedUpstream = false)
     {
         var before = profile.HealthState;
         if (!installed && before != RunnerHealthState.NotInstalled && before != RunnerHealthState.Broken)
             profile.HealthState = RunnerHealthState.NotInstalled;
         else if (installed && before == RunnerHealthState.NotInstalled)
             profile.HealthState = updateAvailable ? RunnerHealthState.UpdateAvailable : RunnerHealthState.UpToDate;
+        else if (installed && checkedUpstream && before == RunnerHealthState.UpdateAvailable && !updateAvailable)
+            profile.HealthState = RunnerHealthState.UpToDate;   // it was updated: the yellow card turns green again
 
         if (profile.HealthState != before && Selected?.Id == profile.Id) UpdateRunnerLegendAndButtons(profile);
     }
@@ -998,7 +1015,8 @@ public partial class MainWindow : Window
             var status = await _runners.CheckForUpdateAsync(profile);
             if (ticket != _refreshCounter) return;
             SyncCardInstallState(profile, installed: true,
-                updateAvailable: status == UpdateStatus.UpdateAvailable || needsBuild);
+                updateAvailable: status == UpdateStatus.UpdateAvailable || needsBuild,
+                checkedUpstream: status != UpdateStatus.Unknown);
 
             switch (status)
             {
@@ -1059,8 +1077,8 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Works at any time after Launch was clicked: during pipeline translation as well as while the game runs.
-    /// Cancels the pipeline, stops the game and any leftover process of the runner's exe (e.g. victory.exe).
+    /// Works at any time after Launch was clicked: while the game runs.
+    /// Stops the game and any leftover process of the runner's exe (e.g. victory.exe).
     /// </summary>
     private void StopGame()
     {
@@ -1218,6 +1236,7 @@ public partial class MainWindow : Window
             }
 
             await RefreshVersionAsync();
+            await CheckAllRunnersHealthAsync();   // recolours the cards (yellow -> green after an update)
         }
         catch (Exception ex)
         {
@@ -1231,7 +1250,7 @@ public partial class MainWindow : Window
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
     {
-        // The button is "Stop Game" from the first moment of the launch (pipeline included).
+        // The button is "Stop Game" from the first moment of the launch.
         if (_launchCts != null)
         {
             StopGame();
@@ -1261,6 +1280,18 @@ public partial class MainWindow : Window
             return;
         }
 
+        // Tell the player what changed before the game starts; Cancel keeps the game from starting.
+        var notice = MessageBox.Show(
+            "Before the game starts:\n\n" +
+            "• The Pipeline option no longer exists. The game already collects its cache while you play. " +
+            "By the second or third time you play, the pipelines are built.\n\n" +
+            "• The Xbox Series S / X option does not work with some runners. If you get a black screen or a crash, " +
+            "try the other Xbox Series version.\n\n" +
+            "• Using each runner's recommended settings is advised. You can see the recommended settings and what " +
+            "they do in Settings.",
+            "Before you launch", MessageBoxButton.OKCancel, MessageBoxImage.Information);
+        if (notice != MessageBoxResult.OK) return;
+
         var cts = new CancellationTokenSource();
         _launchCts = cts;
         _launchProfile = profile;
@@ -1268,10 +1299,9 @@ public partial class MainWindow : Window
 
         try
         {
-            var usePipeline = PipelineToggleButton.IsEnabled && PipelineToggleButton.IsChecked == true;
             var options = _launchStore.Get(profile.Id);
             var process = await _launcher.Launch(
-                profile, _config.GameFolder, _config.GameExe, Log, usePipeline,
+                profile, _config.GameFolder, _config.GameExe, Log,
                 onExited: () =>
                 {
                     try { Dispatcher.Invoke(() => EndLaunch(cts)); }
@@ -1280,7 +1310,8 @@ public partial class MainWindow : Window
                 ct: cts.Token,
                 options: options,
                 seriesS: SeriesSSelected,
-                resolution: SelectedResolution);
+                gpu: SelectedGpu,
+                useRecommended: _config.UseRecommended);
 
             // Stop was clicked just as the game process was being started: close it right away.
             if (!ReferenceEquals(_launchCts, cts))
@@ -1294,7 +1325,7 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException)
         {
-            // Stop Game during the pipeline: StopGame() has already cleaned up and logged.
+            // Stop Game: StopGame() has already cleaned up and logged.
             EndLaunch(cts);
         }
         catch (Exception ex)
