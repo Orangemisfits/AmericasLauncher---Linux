@@ -148,7 +148,7 @@
     ],
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with AMD",
+    "notes": "Nuked/Deleted Runner",
     "recommended": {
       "both": {
         "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
@@ -517,7 +517,7 @@
     ],
     "exe": "target\\release\\victory.exe",
     "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Best with AMD",
+    "notes": "Nuked/Deleted Runner",
     "recommended": {
       "both": {
         "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
