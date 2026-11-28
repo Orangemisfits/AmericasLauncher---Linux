@@ -22,12 +22,10 @@ Un launcher moderno per Windows che configura, aggiorna, compila e avvia automat
 | Runner | Basato su | Ideale per | Repository |
 |---|---|---|---|
 | **XCL** | Livello di compatibilità Xbox Series indipendente | Both | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
-| **Belabug - VIctory Based** | Fork di VIctory | AMD | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
 | **Dexnom - VIctory Based** | Fork di VIctory | Both | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
 | **KLBF-LAB** | Fork di VIctory | AMD | [PastiiJay/klbf-lab](https://github.com/PastiiJay/klbf-lab) |
 | **VIctory(Original)** | Livello di compatibilità VIctory originale | Unknown | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 | **hyphenn - VIctory Based** | Fork di VIctory | Unknown | [fxceless/victory-fork](https://github.com/fxceless/victory-fork) |
-| **AvatarManz - VIctory Based** | Fork di VIctory | AMD | [avatarmanz/VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) |
 | **Nvidia - VIctory Based** | Fork di VIctory (basato su AvatarManz) | Nvidia | [trustno1-coder/VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) |
 | **CGBJ - Victory Based** | Fork di VIctory | Nvidia | [DoubleGhosty/cool_fox](https://github.com/DoubleGhosty/cool_fox) |
 

@@ -22,12 +22,10 @@
 | रनर | आधारित | किसके लिए बेहतर | रिपॉजिटरी |
 |---|---|---|---|
 | **XCL** | स्वतंत्र Xbox Series कम्पैटिबिलिटी लेयर | Both | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
-| **Belabug - VIctory Based** | VIctory फ़ॉर्क | AMD | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
 | **Dexnom - VIctory Based** | VIctory फ़ॉर्क | Both | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
 | **KLBF-LAB** | VIctory फ़ॉर्क | AMD | [PastiiJay/klbf-lab](https://github.com/PastiiJay/klbf-lab) |
 | **VIctory(Original)** | मूल VIctory कम्पैटिबिलिटी लेयर | Unknown | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 | **hyphenn - VIctory Based** | VIctory फ़ॉर्क | Unknown | [fxceless/victory-fork](https://github.com/fxceless/victory-fork) |
-| **AvatarManz - VIctory Based** | VIctory फ़ॉर्क | AMD | [avatarmanz/VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) |
 | **Nvidia - VIctory Based** | VIctory फ़ॉर्क (AvatarManz पर आधारित) | Nvidia | [trustno1-coder/VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) |
 | **CGBJ - Victory Based** | VIctory फ़ॉर्क | Nvidia | [DoubleGhosty/cool_fox](https://github.com/DoubleGhosty/cool_fox) |
 

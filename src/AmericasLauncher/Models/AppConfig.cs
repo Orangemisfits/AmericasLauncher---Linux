@@ -26,6 +26,8 @@ public sealed class AppConfig
     public string CustomRunnersDir { get; set; } = "";
     public string CustomCacheDir { get; set; } = "";
     public string CustomRunnerGitUrl { get; set; } = "";
+    public string CustomRunner2GitUrl { get; set; } = "";
+    public string CustomRunner3GitUrl { get; set; } = "";
 
     /// <summary>Runner id -> true when Xbox Series S is chosen (legacy, migrated to ConsoleMode).</summary>
     public Dictionary<string, bool> SeriesS { get; set; } = new();

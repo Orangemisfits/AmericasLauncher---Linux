@@ -1,7 +1,69 @@
 [
   {
     "id": "custom",
-    "name": "Custom Runner",
+    "name": "Custom Runner 1",
+    "gitUrl": "",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameExe}\" --execute",
+    "notes": "Custom GitHub Repository",
+    "recommended": {}
+  },
+  {
+    "id": "custom2",
+    "name": "Custom Runner 2",
+    "gitUrl": "",
+    "dependencies": [
+      {
+        "name": "Git",
+        "wingetId": "Git.Git",
+        "check": "command:git"
+      },
+      {
+        "name": "Visual Studio Build Tools (C++)",
+        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
+        "check": "vsbuildtools",
+        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+      },
+      {
+        "name": "Rust (rustup)",
+        "wingetId": "Rustlang.Rustup",
+        "check": "command:cargo"
+      }
+    ],
+    "buildCommands": [
+      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
+      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
+    ],
+    "exe": "target\\release\\victory.exe",
+    "launchArgs": "run \"{gameExe}\" --execute",
+    "notes": "Custom GitHub Repository",
+    "recommended": {}
+  },
+  {
+    "id": "custom3",
+    "name": "Custom Runner 3",
     "gitUrl": "",
     "dependencies": [
       {
@@ -116,134 +178,6 @@
       "both": {
         "summary": "No special settings are recommended by this project: it runs with its defaults. Series S uses the PC upscaler only when VICTORY_FIDELITYFX_DIR is set.",
         "env": []
-      }
-    }
-  },
-  {
-    "id": "VIctory-Belobug",
-    "name": "Belabug - VIctory Based",
-    "gitUrl": "https://github.com/Belobug/VIctory-Belobug-AMD.git",
-    "dependencies": [
-      {
-        "name": "Git",
-        "wingetId": "Git.Git",
-        "check": "command:git"
-      },
-      {
-        "name": "Visual Studio Build Tools (C++)",
-        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
-        "check": "vsbuildtools",
-        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-      },
-      {
-        "name": "Rust (rustup)",
-        "wingetId": "Rustlang.Rustup",
-        "check": "command:cargo"
-      }
-    ],
-    "buildCommands": [
-      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
-      "copy victory.example.toml victory.toml",
-      "cargo +stable-x86_64-pc-windows-msvc build --release -p victory"
-    ],
-    "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Nuked/Deleted Runner",
-    "recommended": {
-      "both": {
-        "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
-        "env": [
-          {
-            "name": "VICTORY_THIN",
-            "value": "1",
-            "desc": "Faster, newer GPU submission path. If the game misbehaves, turn it off (0)."
-          },
-          {
-            "name": "VICTORY_JOIN_PARTS",
-            "value": "8",
-            "desc": "Joins GPU work into bigger parts (8) to cut overhead."
-          },
-          {
-            "name": "VICTORY_UPLOAD_AHEAD",
-            "value": "1",
-            "desc": "Uploads data to the GPU ahead of time to avoid hitches."
-          },
-          {
-            "name": "VICTORY_TEXTURE_NO_WAIT",
-            "value": "1",
-            "desc": "Textures do not stall the frame while they stream in."
-          },
-          {
-            "name": "VICTORY_RELAY",
-            "value": "2",
-            "desc": "Faster command submission / copy handling from the fork's own play script."
-          },
-          {
-            "name": "VICTORY_RELAY_COPY",
-            "value": "1",
-            "desc": "Faster command submission / copy handling from the fork's own play script."
-          },
-          {
-            "name": "VICTORY_JOIN_COPIES",
-            "value": "1",
-            "desc": "Merges copy commands."
-          },
-          {
-            "name": "VICTORY_WIDE_BACK",
-            "value": "1",
-            "desc": "Wider write-back path for GPU buffers."
-          },
-          {
-            "name": "VICTORY_CARD_REHASH_RUNS",
-            "value": "1",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_CARD_STEPS",
-            "value": "2",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_CARD_AWAKE",
-            "value": "1",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_INDIRECT_WINDOW",
-            "value": "1",
-            "desc": "Batches indirect draws."
-          },
-          {
-            "name": "VICTORY_INDIRECT_BATCH",
-            "value": "2",
-            "desc": "Batches indirect draws."
-          },
-          {
-            "name": "VICTORY_MAP_THREADS",
-            "value": "1",
-            "desc": "Memory-mapping thread count."
-          },
-          {
-            "name": "VICTORY_TITLE_PRIORITIES",
-            "value": "0",
-            "desc": "Leaves the game's own thread priorities alone."
-          },
-          {
-            "name": "VICTORY_SHOW_AFTER",
-            "value": "1",
-            "desc": "Presents frames after their work is submitted."
-          },
-          {
-            "name": "VICTORY_AMBIENT",
-            "value": "0.8",
-            "desc": "Estimated indirect light (0.8) so shaded areas are not black."
-          },
-          {
-            "name": "VICTORY_D3D12_DRED",
-            "value": "light",
-            "desc": "Light crash tracing in case the GPU driver resets."
-          }
-        ]
       }
     }
   },
@@ -484,133 +418,6 @@
             "name": "VICTORY_AMBIENT_FALLBACK",
             "value": "1",
             "desc": "Lightweight ambient light so interiors are not black without ray tracing."
-          }
-        ]
-      }
-    }
-  },
-  {
-    "id": "avatarmanz",
-    "name": "AvatarManz - VIctory Based",
-    "gitUrl": "https://github.com/avatarmanz/VIctory-7900XTX.git",
-    "dependencies": [
-      {
-        "name": "Git",
-        "wingetId": "Git.Git",
-        "check": "command:git"
-      },
-      {
-        "name": "Visual Studio Build Tools (C++)",
-        "wingetId": "Microsoft.VisualStudio.2022.BuildTools",
-        "check": "vsbuildtools",
-        "wingetOverride": "--wait --passive --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-      },
-      {
-        "name": "Rust (rustup)",
-        "wingetId": "Rustlang.Rustup",
-        "check": "command:cargo"
-      }
-    ],
-    "buildCommands": [
-      "rustup toolchain install stable-x86_64-pc-windows-msvc --profile minimal",
-      "cargo +stable-x86_64-pc-windows-msvc build --release --workspace"
-    ],
-    "exe": "target\\release\\victory.exe",
-    "launchArgs": "run \"{gameExe}\" --execute",
-    "notes": "Nuked/Deleted Runner",
-    "recommended": {
-      "both": {
-        "summary": "The settings from the fork's own scripts\\play.ps1 (same for AMD and Nvidia). FSR 4K and ray tracing are optional extras you can add in Launch Options.",
-        "env": [
-          {
-            "name": "VICTORY_THIN",
-            "value": "1",
-            "desc": "Faster, newer GPU submission path. If the game misbehaves, turn it off (0)."
-          },
-          {
-            "name": "VICTORY_JOIN_PARTS",
-            "value": "8",
-            "desc": "Joins GPU work into bigger parts (8) to cut overhead."
-          },
-          {
-            "name": "VICTORY_UPLOAD_AHEAD",
-            "value": "1",
-            "desc": "Uploads data to the GPU ahead of time to avoid hitches."
-          },
-          {
-            "name": "VICTORY_TEXTURE_NO_WAIT",
-            "value": "1",
-            "desc": "Textures do not stall the frame while they stream in."
-          },
-          {
-            "name": "VICTORY_RELAY",
-            "value": "2",
-            "desc": "Faster command submission / copy handling from the fork's own play script."
-          },
-          {
-            "name": "VICTORY_RELAY_COPY",
-            "value": "1",
-            "desc": "Faster command submission / copy handling from the fork's own play script."
-          },
-          {
-            "name": "VICTORY_JOIN_COPIES",
-            "value": "1",
-            "desc": "Merges copy commands."
-          },
-          {
-            "name": "VICTORY_WIDE_BACK",
-            "value": "1",
-            "desc": "Wider write-back path for GPU buffers."
-          },
-          {
-            "name": "VICTORY_CARD_REHASH_RUNS",
-            "value": "1",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_CARD_STEPS",
-            "value": "2",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_CARD_AWAKE",
-            "value": "1",
-            "desc": "GPU-side change tracking tuning."
-          },
-          {
-            "name": "VICTORY_INDIRECT_WINDOW",
-            "value": "1",
-            "desc": "Batches indirect draws."
-          },
-          {
-            "name": "VICTORY_INDIRECT_BATCH",
-            "value": "2",
-            "desc": "Batches indirect draws."
-          },
-          {
-            "name": "VICTORY_MAP_THREADS",
-            "value": "1",
-            "desc": "Memory-mapping thread count."
-          },
-          {
-            "name": "VICTORY_TITLE_PRIORITIES",
-            "value": "0",
-            "desc": "Leaves the game's own thread priorities alone."
-          },
-          {
-            "name": "VICTORY_SHOW_AFTER",
-            "value": "1",
-            "desc": "Presents frames after their work is submitted."
-          },
-          {
-            "name": "VICTORY_AMBIENT",
-            "value": "0.8",
-            "desc": "Estimated indirect light (0.8) so shaded areas are not black."
-          },
-          {
-            "name": "VICTORY_D3D12_DRED",
-            "value": "light",
-            "desc": "Light crash tracing in case the GPU driver resets."
           }
         ]
       }

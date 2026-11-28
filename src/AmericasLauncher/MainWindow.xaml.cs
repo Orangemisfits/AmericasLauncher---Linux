@@ -50,11 +50,15 @@ public partial class MainWindow : Window
 
         _config = _configService.Load();
         _profiles = ConfigService.LoadProfiles();
-        var customProfile = _profiles.FirstOrDefault(p => string.Equals(p.Id, "custom", StringComparison.OrdinalIgnoreCase));
-        if (customProfile != null && !string.IsNullOrWhiteSpace(_config.CustomRunnerGitUrl))
-            customProfile.GitUrl = _config.CustomRunnerGitUrl;
-        if (CustomRunnerUrlBox != null)
-            CustomRunnerUrlBox.Text = _config.CustomRunnerGitUrl;
+        foreach (var id in CustomIds)
+        {
+            var customProfile = _profiles.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+            var url = CustomUrl(id);
+            if (customProfile != null && !string.IsNullOrWhiteSpace(url))
+                customProfile.GitUrl = url;
+            var (box, _) = CustomUi(id);
+            if (box != null) box.Text = url;
+        }
         _launchStore = LaunchOptionsStore.Load();   // never throws; an unreadable file is set aside
         if (_launchStore.LoadProblem != null) Log("[!] " + _launchStore.LoadProblem);
 
@@ -264,24 +268,56 @@ public partial class MainWindow : Window
         RecommendedBodyText.Text = sb.ToString().TrimEnd();
     }
 
+    /// <summary>The three Custom Runners (Settings has one section for each).</summary>
+    private static readonly string[] CustomIds = { "custom", "custom2", "custom3" };
+
+    private static bool IsCustomId(string? id) =>
+        CustomIds.Any(c => string.Equals(c, id, StringComparison.OrdinalIgnoreCase));
+
+    private string CustomUrl(string id) => id.ToLowerInvariant() switch
+    {
+        "custom2" => _config.CustomRunner2GitUrl,
+        "custom3" => _config.CustomRunner3GitUrl,
+        _ => _config.CustomRunnerGitUrl
+    };
+
+    private void SetCustomUrl(string id, string url)
+    {
+        switch (id.ToLowerInvariant())
+        {
+            case "custom2": _config.CustomRunner2GitUrl = url; break;
+            case "custom3": _config.CustomRunner3GitUrl = url; break;
+            default: _config.CustomRunnerGitUrl = url; break;
+        }
+    }
+
+    private (System.Windows.Controls.TextBox? Box, System.Windows.Controls.TextBlock? Status) CustomUi(string id) => id.ToLowerInvariant() switch
+    {
+        "custom2" => (CustomRunner2UrlBox, CustomRunner2UrlStatusText),
+        "custom3" => (CustomRunner3UrlBox, CustomRunner3UrlStatusText),
+        _ => (CustomRunnerUrlBox, CustomRunnerUrlStatusText)
+    };
+
     private void CustomRunnerUrlSave_Click(object sender, RoutedEventArgs e)
     {
-        var url = (CustomRunnerUrlBox?.Text ?? "").Trim().TrimEnd('/');
+        var id = (sender as FrameworkElement)?.Tag as string ?? "custom";
+        var (box, status) = CustomUi(id);
+        var url = (box?.Text ?? "").Trim().TrimEnd('/');
         if (url.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
             url = url[..^4];
 
-        _config.CustomRunnerGitUrl = url;
+        SetCustomUrl(id, url);
         _configService.Save(_config);
 
-        var custom = _profiles.FirstOrDefault(p => string.Equals(p.Id, "custom", StringComparison.OrdinalIgnoreCase));
+        var custom = _profiles.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
         if (custom != null) custom.GitUrl = url;
 
-        if (CustomRunnerUrlStatusText != null)
+        if (status != null)
         {
-            CustomRunnerUrlStatusText.Text = string.IsNullOrWhiteSpace(url)
-                ? "Cleared. Custom Runner buttons are disabled until a GitHub URL is set."
+            status.Text = string.IsNullOrWhiteSpace(url)
+                ? "Cleared. This Custom Runner's buttons are disabled until a GitHub URL is set."
                 : $"Saved: {url}";
-            CustomRunnerUrlStatusText.Foreground = string.IsNullOrWhiteSpace(url) ? Brushes.Orange : Brushes.LimeGreen;
+            status.Foreground = string.IsNullOrWhiteSpace(url) ? Brushes.Orange : Brushes.LimeGreen;
         }
 
         UpdateRunnerLegendAndButtons(Selected);
@@ -633,6 +669,7 @@ public partial class MainWindow : Window
             cts.Dispose();
             _nvidiaRunning = false;
             UpdateNvidiaState();
+            LoadNvidiaSettings();   // the first run creates the settings file
         }
     }
 
@@ -715,7 +752,13 @@ public partial class MainWindow : Window
     /// <summary>Shows what the settings file holds (the game's own defaults for what it does not hold).</summary>
     private void LoadNvidiaSettings()
     {
-        if (NvDlssBox == null || _nvDirty) return;
+        if (NvDlssBox == null) return;
+        // The file is created by the game's first run: without it the settings stay locked.
+        var exists = File.Exists(NvSettingsPath());
+        NvSettingsBody.IsEnabled = exists;
+        NvSettingsLockText.Visibility = exists ? Visibility.Collapsed : Visibility.Visible;
+        if (!exists) { NvSettingsStatus.Text = ""; return; }
+        if (_nvDirty) return;
         var d = NvReadSettings();
         string Get(string key, string def) => d.TryGetValue(key, out var v) ? v : def;
 
@@ -737,12 +780,29 @@ public partial class MainWindow : Window
             NvPanelCheck.IsChecked = Get("VICTORY_PANEL", "0") == "1";
             NvFullscreenCheck.IsChecked = Get("VICTORY_FULLSCREEN", "") == "1";
             NvMouseCheck.IsChecked = Get("VICTORY_MOUSE_CAPTURE", "") == "1";
+            NvMnkCheck.IsChecked = Get("VICTORY_MNK", "") == "1";
             NvUpdatePictureRows();
         }
         finally { _nvLoading = false; }
-        NvSettingsStatus.Text = File.Exists(NvSettingsPath())
-            ? "Loaded from " + NvSettingsPath()
-            : "No settings file yet: these are the game's defaults. Save settings creates it.";
+        NvSettingsStatus.Text = "Loaded from " + NvSettingsPath();
+    }
+
+    private void NvSettingsExpander_Expanded(object sender, RoutedEventArgs e) => LoadNvidiaSettings();
+
+    /// <summary>The default mouse and keyboard keys (bindings.ini); the game's F1 > KEY BINDINGS changes them.</summary>
+    private void NvKeybinds_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "Sensitivity = 0.135\n" +
+            "MoveUp = W\nMoveDown = S\nMoveLeft = A\nMoveRight = D\n" +
+            "RT = Mouse1\nLT = Mouse2\n" +
+            "A = Shift, Enter\nB = R, Backspace\nX = Space\nY = F\n" +
+            "LB = Tab\nRB = Q\nLS = Ctrl\nRS = Mouse3\n" +
+            "Menu = Esc\nView = V\n" +
+            "DpadUp = Up\nDpadDown = Down\nDpadLeft = Left\nDpadRight = Right\n\n" +
+            "Tick \"Mouse and keyboard\" and save. In the game, press F1 > KEY BINDINGS (MOUSE AND KEYBOARD) to change the keys. " +
+            "They are saved in bindings.ini in " + Path.GetDirectoryName(NvSettingsPath()) + ".",
+            "Keybinds (mouse and keyboard)", MessageBoxButton.OK, MessageBoxImage.Information);
     }
 
     private void NvUpdatePictureRows()
@@ -810,6 +870,7 @@ public partial class MainWindow : Window
                 ("VICTORY_PANEL", NvPanelCheck.IsChecked == true ? "1" : "0", "0"),
                 ("VICTORY_FULLSCREEN", NvFullscreenCheck.IsChecked == true ? "1" : "", ""),
                 ("VICTORY_MOUSE_CAPTURE", NvMouseCheck.IsChecked == true ? "1" : "", ""),
+                ("VICTORY_MNK", NvMnkCheck.IsChecked == true ? "1" : "", ""),
                 ("VICTORY_MENU_CONSOLE", series, "series-x"),
                 ("VICTORY_DLSS_PRESET", NvSelectedTag(NvModelBox), "")
             };
@@ -1011,7 +1072,7 @@ public partial class MainWindow : Window
         if (sender is not System.Windows.Controls.Button { Tag: RunnerProfile profile }) return;
         e.Handled = true;
 
-        if (string.Equals(profile.Id, "custom", StringComparison.OrdinalIgnoreCase))
+        if (IsCustomId(profile.Id))
         {
             if (SettingsNavButton.IsChecked != true) SettingsNavButton.IsChecked = true;
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => CustomRunnerCard.BringIntoView());
@@ -1618,8 +1679,8 @@ public partial class MainWindow : Window
 
     private bool IsMissingCustomUrl(RunnerProfile? profile) =>
         profile != null &&
-        string.Equals(profile.Id, "custom", StringComparison.OrdinalIgnoreCase) &&
-        string.IsNullOrWhiteSpace(_config.CustomRunnerGitUrl);
+        IsCustomId(profile.Id) &&
+        string.IsNullOrWhiteSpace(CustomUrl(profile.Id));
 
     private void SetBusy(bool busy)
     {
