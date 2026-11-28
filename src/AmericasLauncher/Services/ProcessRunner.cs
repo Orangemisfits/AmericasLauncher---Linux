@@ -8,6 +8,23 @@ namespace AmericasLauncher.Services;
 public static class ProcessRunner
 {
     /// <summary>
+    /// Git must never ask for a login. GIT_TERMINAL_PROMPT=0 only stops the console prompt: Git Credential Manager
+    /// (installed with Git for Windows) still opened a GitHub sign-in window when a repository was not found or
+    /// private (for example a deleted runner or a mistyped Custom Runner URL), and signing in did nothing.
+    /// Every runner here is a public repository, so no credentials are used at all.
+    /// </summary>
+    public static void NoGitPrompts(IDictionary<string, string?> env)
+    {
+        env["GIT_TERMINAL_PROMPT"] = "0";        // no console prompt
+        env["GCM_INTERACTIVE"] = "never";        // Git Credential Manager: no sign-in window
+        env["GIT_ASKPASS"] = "echo";             // no askpass program either
+        env["SSH_ASKPASS"] = "echo";
+        env["GIT_CONFIG_COUNT"] = "1";           // credential.helper cleared for these git runs (git 2.31+)
+        env["GIT_CONFIG_KEY_0"] = "credential.helper";
+        env["GIT_CONFIG_VALUE_0"] = "";
+    }
+
+    /// <summary>
     /// Runs a console process hidden and forwards every output line to <paramref name="log"/>.
     /// <paramref name="log"/> may be called from background threads.
     /// </summary>
@@ -26,7 +43,7 @@ public static class ProcessRunner
             CreateNoWindow = true
         };
         if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
-        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";   // never block waiting for git credentials
+        NoGitPrompts(psi.Environment);
         if (environment != null) LaunchOptionsService.Apply(psi.Environment, environment);
 
         using var process = new Process { StartInfo = psi };
@@ -66,7 +83,7 @@ public static class ProcessRunner
             CreateNoWindow = true
         };
         if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
-        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        NoGitPrompts(psi.Environment);
 
         try
         {
@@ -111,7 +128,7 @@ public static class ProcessRunner
             CreateNoWindow = true
         };
         if (!string.IsNullOrEmpty(workingDirectory)) psi.WorkingDirectory = workingDirectory;
-        psi.Environment["GIT_TERMINAL_PROMPT"] = "0";
+        NoGitPrompts(psi.Environment);
         if (environment != null) LaunchOptionsService.Apply(psi.Environment, environment);
 
         using var process = new Process { StartInfo = psi };

@@ -279,6 +279,8 @@ public sealed class RunnerService
             if (await ProcessRunner.RunAsync("git", $"clone --depth 1 \"{p.GitUrl}\" \"{dir}\"", null, log, ct) != 0)
             {
                 log("[!!] git clone failed.");
+                log("If it says the repository was not found, the runner may have been deleted or the URL is wrong " +
+                    "(for a Custom Runner, check the GitHub URL in Settings). The launcher never asks for a GitHub login.");
                 return false;
             }
         }
