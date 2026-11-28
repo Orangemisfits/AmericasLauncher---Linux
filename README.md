@@ -1,3 +1,5 @@
+☕ [Buy me a coffee](https://buymeacoffee.com/americaslauncher) — You can buy me a coffee to support and develop Americas Launcher. Remember, the Launcher is free and will always remain free!
+
 **English** | [Türkçe](README.tr.md) | [Русский](README.ru.md) | [中文](README.zh.md) | [Español](README.es.md) | [Italiano](README.it.md) | [Polski](README.pl.md) | [Português (BR)](README.pt-BR.md) | [हिन्दी](README.hi.md)
 
 **Windows Build:** ✅ Working &nbsp;·&nbsp; **Linux Build:** 🚧 Work in progress &nbsp;·&nbsp; **Mac Build:** ⚫ Not planned
