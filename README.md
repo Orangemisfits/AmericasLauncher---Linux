@@ -36,12 +36,12 @@ Runners are configured in [`src/AmericasLauncher/Data/runners.json`](src/America
 | Runner | Based On | Best with | Repository |
 |---|---|---|---|
 | **XCL** | Independent Xbox Series compatibility layer | Both | [xcl-dev/xcl](https://github.com/xcl-dev/xcl) |
-| **Belabug - VIctory Based** | VIctory fork | AMD | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
+| **NUKED** | VIctory fork | AMD | [Belobug/VIctory-Belobug-AMD](https://github.com/Belobug/VIctory-Belobug-AMD) |
 | **Dexnom - VIctory Based** | VIctory fork | Both | [DexNom/VIctory](https://github.com/DexNom/VIctory) |
 | **KLBF-LAB** | VIctory fork | AMD | [PastiiJay/klbf-lab](https://github.com/PastiiJay/klbf-lab) |
 | **VIctory(Original)** | Original VIctory compatibility layer | Unknown | [Marvisak/VIctory](https://github.com/Marvisak/VIctory) |
 | **hyphenn - VIctory Based** | VIctory fork | Unknown | [fxceless/victory-fork](https://github.com/fxceless/victory-fork) |
-| **AvatarManz - VIctory Based** | VIctory fork | AMD | [avatarmanz/VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) |
+| **NUKED** | VIctory fork | AMD | [avatarmanz/VIctory-7900XTX](https://github.com/avatarmanz/VIctory-7900XTX) |
 | **Nvidia - VIctory Based** | VIctory fork (based on AvatarManz) | Nvidia | [trustno1-coder/VIctory-NVIDIA](https://github.com/trustno1-coder/VIctory-NVIDIA) |
 | **CGBJ - Victory Based** | VIctory fork | Nvidia | [DoubleGhosty/cool_fox](https://github.com/DoubleGhosty/cool_fox) |
 
