@@ -602,12 +602,20 @@ public partial class MainWindow : Window
         _nvidiaRunning = true;
         UpdateNvidiaState();
         NvidiaLog($"> {exe}");
+        // "Preload shaders" is for this start only.
+        var preload = NvPreloadCheck.IsChecked == true;
+        if (preload)
+        {
+            NvPreloadCheck.IsChecked = false;
+            NvidiaLog("Preloading shaders first (VICTORY_PRELOAD=1): this can take a while.");
+        }
         try
         {
             var code = await ProcessRunner.RunInteractiveAsync(
                 exe, "", Path.GetDirectoryName(exe), NvidiaLog,
                 send => { _nvidiaSend = send; },
-                cts.Token);
+                cts.Token,
+                preload ? new Dictionary<string, string?> { ["VICTORY_PRELOAD"] = "1" } : null);
             NvidiaLog($"victory.exe exited with code {code}.");
         }
         catch (OperationCanceledException)
@@ -646,6 +654,198 @@ public partial class MainWindow : Window
         NvidiaLog($"> {text}");
         if (_nvidiaSend != null) _nvidiaSend(text);
         else NvidiaLog("(victory.exe is not running, so nothing received this.)");
+    }
+
+    // ---- Nvidia - VIctory Based: DLSS settings (the game's own settings file) -----------------------------------
+
+    /// <summary>The Series S scene sizes and the DLSS mode of each: one choice (1080 = DLAA, 720 = Quality, ...).</summary>
+    private static readonly (string Size, string Mode)[] NvSeriesSModes =
+        { ("1080", "dlaa"), ("720", "quality"), ("626", "balanced"), ("540", "performance") };
+
+    private bool _nvLoading;
+    private bool _nvDirty;
+
+    /// <summary>%LOCALAPPDATA%\victory\victory-settings.txt (or VICTORY_HOME), the file the game's F1 menu saves to.</summary>
+    private static string NvSettingsPath()
+    {
+        var home = Environment.GetEnvironmentVariable("VICTORY_HOME");
+        var dir = !string.IsNullOrWhiteSpace(home)
+            ? home
+            : Path.Combine(Environment.GetEnvironmentVariable("LOCALAPPDATA") ?? "", "victory");
+        return Path.Combine(dir, "victory-settings.txt");
+    }
+
+    /// <summary>KEY=value lines of the file (the last one of a key wins); a missing file is empty.</summary>
+    private static Dictionary<string, string> NvReadSettings()
+    {
+        var d = new Dictionary<string, string>(StringComparer.Ordinal);
+        try
+        {
+            var path = NvSettingsPath();
+            if (!File.Exists(path)) return d;
+            foreach (var line in File.ReadAllLines(path))
+            {
+                var i = line.IndexOf('=');
+                if (i <= 0) continue;
+                var key = line[..i].Trim();
+                if (key.StartsWith("VICTORY_", StringComparison.Ordinal)) d[key] = line[(i + 1)..].Trim();
+            }
+        }
+        catch { /* unreadable: the defaults are shown */ }
+        return d;
+    }
+
+    private static string NvSelectedTag(System.Windows.Controls.ComboBox box) =>
+        (box.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Tag as string ?? "";
+
+    private static void NvSelectTag(System.Windows.Controls.ComboBox box, string tag, string fallback)
+    {
+        foreach (var o in box.Items)
+            if (o is System.Windows.Controls.ComboBoxItem it && string.Equals(it.Tag as string, tag, StringComparison.Ordinal))
+            {
+                box.SelectedItem = it;
+                return;
+            }
+        if (tag != fallback) NvSelectTag(box, fallback, fallback);
+    }
+
+    private static string NvSizeForMode(string mode) =>
+        NvSeriesSModes.FirstOrDefault(m => m.Mode == mode).Size ?? "720";
+
+    /// <summary>Shows what the settings file holds (the game's own defaults for what it does not hold).</summary>
+    private void LoadNvidiaSettings()
+    {
+        if (NvDlssBox == null || _nvDirty) return;
+        var d = NvReadSettings();
+        string Get(string key, string def) => d.TryGetValue(key, out var v) ? v : def;
+
+        _nvLoading = true;
+        try
+        {
+            var dlss = Get("VICTORY_MENU_DLSS", "quality");
+            NvSelectTag(NvDlssBox, dlss, "quality");
+            var fg = Get("VICTORY_MENU_FRAMEGEN", "0");
+            NvSelectTag(NvFramegenBox, fg == "1" ? "2" : fg, "0");   // "1" is from an older file: 2x
+            NvSelectTag(NvFgTypeBox, Get("VICTORY_MENU_FG_TYPE", "auto"), "auto");
+            NvSelectTag(NvFpsBox, Get("VICTORY_MENU_FPS", "1000"), "1000");
+            NvSelectTag(NvConsoleBox, Get("VICTORY_MENU_CONSOLE", "series-x"), "series-x");
+            NvSelectTag(NvXResBox, Get("VICTORY_MENU_RES", "1440"), "1440");
+            NvSelectTag(NvSResBox, Get("VICTORY_MENU_S_RES", NvSizeForMode(dlss)), "720");
+            NvSelectTag(NvModelBox, Get("VICTORY_DLSS_PRESET", ""), "");
+            NvMfgCheck.IsChecked = Get("VICTORY_MFG_UNLOCKER", "") == "1";
+            NvFpsLineCheck.IsChecked = Get("VICTORY_FPS_LINE", "1") != "0";
+            NvPanelCheck.IsChecked = Get("VICTORY_PANEL", "0") == "1";
+            NvFullscreenCheck.IsChecked = Get("VICTORY_FULLSCREEN", "") == "1";
+            NvMouseCheck.IsChecked = Get("VICTORY_MOUSE_CAPTURE", "") == "1";
+            NvUpdatePictureRows();
+        }
+        finally { _nvLoading = false; }
+        NvSettingsStatus.Text = File.Exists(NvSettingsPath())
+            ? "Loaded from " + NvSettingsPath()
+            : "No settings file yet: these are the game's defaults. Save settings creates it.";
+    }
+
+    private void NvUpdatePictureRows()
+    {
+        var s = NvSelectedTag(NvConsoleBox) == "series-s";
+        NvSResRow.Visibility = s ? Visibility.Visible : Visibility.Collapsed;
+        NvXResRow.Visibility = s ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void NvSetting_Changed(object sender, RoutedEventArgs e)
+    {
+        if (!_nvLoading && IsLoaded) _nvDirty = true;
+    }
+
+    /// <summary>On Series S the picture size and the DLSS mode are one setting: DLSS sets the size, the size sets DLSS.</summary>
+    private void NvDlss_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_nvLoading || !IsLoaded) return;   // (also skips the events of InitializeComponent)
+        _nvDirty = true;
+        if (NvSelectedTag(NvConsoleBox) != "series-s") return;
+        _nvLoading = true;
+        try { NvSelectTag(NvSResBox, NvSizeForMode(NvSelectedTag(NvDlssBox)), "720"); }
+        finally { _nvLoading = false; }
+    }
+
+    private void NvSRes_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_nvLoading || !IsLoaded) return;   // (also skips the events of InitializeComponent)
+        _nvDirty = true;
+        if (NvSelectedTag(NvConsoleBox) != "series-s") return;
+        var size = NvSelectedTag(NvSResBox);
+        var dlssOff = NvSelectedTag(NvDlssBox) == "off";
+        // DLSS off is the game's own 720; 720 picked then leaves it off.
+        if (dlssOff && size == "720") return;
+        var mode = NvSeriesSModes.FirstOrDefault(m => m.Size == size).Mode;
+        if (mode == null) return;
+        _nvLoading = true;
+        try { NvSelectTag(NvDlssBox, mode, "quality"); }
+        finally { _nvLoading = false; }
+    }
+
+    private void NvConsole_Changed(object sender, RoutedEventArgs e)
+    {
+        if (_nvLoading || !IsLoaded) return;   // (also skips the events of InitializeComponent)
+        _nvDirty = true;
+        NvUpdatePictureRows();
+    }
+
+    /// <summary>Writes the settings above into victory-settings.txt; every other line of the file stays as it is.</summary>
+    private void NvSaveSettings_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var dlss = NvSelectedTag(NvDlssBox);
+            var series = NvSelectedTag(NvConsoleBox);
+            // (key, value, the value the game assumes when the key is missing: then a missing key stays missing)
+            var wanted = new List<(string Key, string Value, string Default)>
+            {
+                ("VICTORY_MENU_DLSS", dlss, "quality"),
+                ("VICTORY_MENU_FRAMEGEN", NvSelectedTag(NvFramegenBox), "0"),
+                ("VICTORY_MENU_FG_TYPE", NvSelectedTag(NvFgTypeBox), "auto"),
+                ("VICTORY_MFG_UNLOCKER", NvMfgCheck.IsChecked == true ? "1" : "", ""),
+                ("VICTORY_MENU_FPS", NvSelectedTag(NvFpsBox), "1000"),
+                ("VICTORY_FPS_LINE", NvFpsLineCheck.IsChecked == true ? "1" : "0", "1"),
+                ("VICTORY_PANEL", NvPanelCheck.IsChecked == true ? "1" : "0", "0"),
+                ("VICTORY_FULLSCREEN", NvFullscreenCheck.IsChecked == true ? "1" : "", ""),
+                ("VICTORY_MOUSE_CAPTURE", NvMouseCheck.IsChecked == true ? "1" : "", ""),
+                ("VICTORY_MENU_CONSOLE", series, "series-x"),
+                ("VICTORY_DLSS_PRESET", NvSelectedTag(NvModelBox), "")
+            };
+            if (series == "series-s")
+                wanted.Add(("VICTORY_MENU_S_RES", NvSelectedTag(NvSResBox), NvSizeForMode(dlss)));
+            else
+                wanted.Add(("VICTORY_MENU_RES", NvSelectedTag(NvXResBox), "1440"));
+
+            var path = NvSettingsPath();
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            var lines = File.Exists(path) ? File.ReadAllLines(path).ToList() : new List<string>();
+
+            foreach (var (key, value, def) in wanted)
+            {
+                var found = false;
+                for (var i = 0; i < lines.Count; i++)
+                {
+                    var eq = lines[i].IndexOf('=');
+                    if (eq <= 0 || lines[i][..eq].Trim() != key) continue;
+                    lines[i] = key + "=" + value;
+                    found = true;
+                }
+                if (!found && value != def) lines.Add(key + "=" + value);
+            }
+            if (lines.Count == 0 || !lines.Any(l => l.Trim().Length > 0))
+                lines.Insert(0, "# Saved by the F1 menu; applied over the play settings at every start (an empty value: unset).");
+
+            File.WriteAllText(path, string.Join("\r\n", lines) + "\r\n", new System.Text.UTF8Encoding(false));
+            _nvDirty = false;
+            NvSettingsStatus.Text = "Saved. Applies at the next start of victory.exe.";
+            NvidiaLog("Settings saved to " + path);
+        }
+        catch (Exception ex)
+        {
+            NvSettingsStatus.Text = "Could not save: " + ex.Message;
+        }
     }
 
     // ---- Home: every release note ---------------------------------------------------------------------------------
@@ -718,7 +918,7 @@ public partial class MainWindow : Window
         if (HomeNavButton.IsChecked == true) LoadReleaseNotes();
         LaunchView.Visibility = LaunchNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         NvidiaView.Visibility = NvidiaNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-        if (NvidiaNavButton.IsChecked == true) UpdateNvidiaState();
+        if (NvidiaNavButton.IsChecked == true) { UpdateNvidiaState(); LoadNvidiaSettings(); }
         PortStatusView.Visibility = PortStatusNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         RunnersView.Visibility = RunnersNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         SettingsView.Visibility = SettingsNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;

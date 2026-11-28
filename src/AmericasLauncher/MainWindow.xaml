@@ -941,13 +941,8 @@
                 </ScrollViewer>
 
                 <!-- VIEW: NVIDIA - VICTORY BASED (a sub-page of Launch; victory.exe runs here and logs to its own log) -->
-                <Grid x:Name="NvidiaView" Visibility="Collapsed">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*" MinHeight="180"/>
-                    </Grid.RowDefinitions>
-
-                    <StackPanel Grid.Row="0">
+                <ScrollViewer x:Name="NvidiaView" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
                         <TextBlock Text="Nvidia - VIctory Based" FontSize="22" FontWeight="Bold" Foreground="#F8FAFC"/>
                         <TextBlock Text="Best with Nvidia. Install downloads the newest victory.exe from the runner's releases; Play with Framegen starts it and shows its log below."
                                    FontSize="12.5" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,12"/>
@@ -977,14 +972,114 @@
                             </StackPanel>
                         </Border>
 
+                        <Border Background="#212838" BorderBrush="#2E3A52" BorderThickness="1" CornerRadius="12" Padding="20,14" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="3. DLSS settings" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC"/>
+                                <TextBlock Text="The same settings as the game's F1 menu, saved to victory-settings.txt (only these are changed; the rest of the file stays as it is). Applies at the next start."
+                                           FontSize="12" Foreground="#94A3B8" TextWrapping="Wrap" Margin="0,4,0,12"/>
+                                <WrapPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="DLSS" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvDlssBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvDlss_Changed">
+                                            <ComboBoxItem Tag="quality" Content="Quality"/>
+                                            <ComboBoxItem Tag="balanced" Content="Balanced"/>
+                                            <ComboBoxItem Tag="performance" Content="Performance"/>
+                                            <ComboBoxItem Tag="dlaa" Content="DLAA (native)"/>
+                                            <ComboBoxItem Tag="off" Content="Off"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="FRAME GENERATION" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvFramegenBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvSetting_Changed">
+                                            <ComboBoxItem Tag="0" Content="Off"/>
+                                            <ComboBoxItem Tag="2" Content="2x"/>
+                                            <ComboBoxItem Tag="3" Content="3x"/>
+                                            <ComboBoxItem Tag="4" Content="4x"/>
+                                            <ComboBoxItem Tag="5" Content="5x"/>
+                                            <ComboBoxItem Tag="6" Content="6x (most)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="FRAME GEN TYPE" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvFgTypeBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvSetting_Changed">
+                                            <ComboBoxItem Tag="auto" Content="Auto"/>
+                                            <ComboBoxItem Tag="dlss" Content="DLSS"/>
+                                            <ComboBoxItem Tag="fsr" Content="FSR 3 (older cards)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="FRAME RATE CAP" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvFpsBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvSetting_Changed">
+                                            <ComboBoxItem Tag="1000" Content="None"/>
+                                            <ComboBoxItem Tag="120" Content="120"/>
+                                            <ComboBoxItem Tag="60" Content="60"/>
+                                            <ComboBoxItem Tag="30" Content="30 (the game)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="CONSOLE" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvConsoleBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvConsole_Changed">
+                                            <ComboBoxItem Tag="series-x" Content="Series X"/>
+                                            <ComboBoxItem Tag="series-s" Content="Series S (faster)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel x:Name="NvXResRow" Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="SERIES X PICTURE" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvXResBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvSetting_Changed">
+                                            <ComboBoxItem Tag="1440" Content="2560x1440"/>
+                                            <ComboBoxItem Tag="1080to1440" Content="1080p to 1440p"/>
+                                            <ComboBoxItem Tag="4k" Content="3840x2160"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel x:Name="NvSResRow" Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="SERIES S PICTURE (sets the DLSS mode)" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvSResBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="1" SelectionChanged="NvSRes_Changed">
+                                            <ComboBoxItem Tag="1080" Content="1920x1080 (DLAA)"/>
+                                            <ComboBoxItem Tag="720" Content="1280x720 (Quality)"/>
+                                            <ComboBoxItem Tag="626" Content="1113x626 (Balanced)"/>
+                                            <ComboBoxItem Tag="540" Content="960x540 (Performance)"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Margin="0,0,24,12" Width="270">
+                                        <TextBlock Text="DLSS MODEL" FontSize="11.5" FontWeight="SemiBold" Foreground="#94A3B8" Margin="0,0,0,4"/>
+                                        <ComboBox x:Name="NvModelBox" Style="{StaticResource ModernComboBox}" Width="260" HorizontalAlignment="Left" SelectedIndex="0" SelectionChanged="NvSetting_Changed">
+                                            <ComboBoxItem Tag="" Content="Default"/>
+                                            <ComboBoxItem Tag="k" Content="K"/>
+                                            <ComboBoxItem Tag="j" Content="J"/>
+                                            <ComboBoxItem Tag="m" Content="M"/>
+                                            <ComboBoxItem Tag="l" Content="L"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </WrapPanel>
+                                <WrapPanel Margin="0,2,0,0">
+                                    <CheckBox x:Name="NvMfgCheck" Content="MFG Unlocker (mod, RTX 20/30)" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="A mod, not from this project: DLSS frame generation on RTX 20 and 30 cards." Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                    <CheckBox x:Name="NvFpsLineCheck" Content="FPS at the top" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="Shows the frame rate at the top of the picture." Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                    <CheckBox x:Name="NvPanelCheck" Content="Stats panel (F3)" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="The stats panel in the game." Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                    <CheckBox x:Name="NvFullscreenCheck" Content="Fullscreen (no border)" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="" Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                    <CheckBox x:Name="NvMouseCheck" Content="Mouse capture" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="" Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                    <CheckBox x:Name="NvPreloadCheck" Content="Preload shaders (next start only)" Foreground="#E2E8F0" FontSize="13" Margin="0,0,24,10" Width="270"
+                                              ToolTip="Makes every shader before the game starts: takes a while, maybe a long time. Done once, at the next Play with Framegen." Checked="NvSetting_Changed" Unchecked="NvSetting_Changed"/>
+                                </WrapPanel>
+                                <WrapPanel Margin="0,6,0,0">
+                                    <Button x:Name="NvSaveSettingsButton" Style="{StaticResource PatriotBlueButton}" Content="Save settings"
+                                            Margin="0,0,12,0" Click="NvSaveSettings_Click"/>
+                                    <TextBlock x:Name="NvSettingsStatus" Text="" FontSize="12" Foreground="#94A3B8" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
                         <Border Background="#0F2A1D" BorderBrush="#16A34A" BorderThickness="1" CornerRadius="10" Padding="14,8" Margin="0,0,0,10">
                             <TextBlock Text="Tip: once you are inside the game, press F1 to open the game's own settings menu (DLSS, frame generation, frame rate cap and more)."
                                        FontSize="12.5" FontWeight="SemiBold" Foreground="#86EFAC" TextWrapping="Wrap"/>
                         </Border>
                         <TextBlock Text="Log" FontSize="13" FontWeight="Bold" Foreground="#F8FAFC" Margin="2,0,0,6"/>
-                    </StackPanel>
 
-                    <Border Grid.Row="1" Background="#0F131C" BorderBrush="#273145" BorderThickness="1" CornerRadius="10" Padding="4">
+                    <Border Height="300" Background="#0F131C" BorderBrush="#273145" BorderThickness="1" CornerRadius="10" Padding="4">
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="*"/>
@@ -1006,7 +1101,8 @@
                             </Grid>
                         </Grid>
                     </Border>
-                </Grid>
+                    </StackPanel>
+                </ScrollViewer>
 
                 <!-- VIEW 2: PORT STATUS -->
                 <Grid x:Name="PortStatusView" Visibility="Collapsed">
