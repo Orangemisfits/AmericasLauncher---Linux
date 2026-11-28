@@ -3,8 +3,11 @@ namespace AmericasLauncher.Models;
 
 public sealed class AppConfig
 {
-    /// <summary>Nvidia - VIctory page: set once "Set Game folder and exe" was clicked; unlocks the Play buttons for good.</summary>
-    public bool NvidiaGameSet { get; set; }
+    /// <summary>Nvidia - VIctory page: the folder victory.exe was downloaded to (next to the game files and exe).</summary>
+    public string NvidiaFolder { get; set; } = "";
+
+    /// <summary>Nvidia - VIctory page: the release tag of the victory.exe that was downloaded.</summary>
+    public string NvidiaTag { get; set; } = "";
 
     public string GameFolder { get; set; } = "";
     public string GameExe { get; set; } = "";

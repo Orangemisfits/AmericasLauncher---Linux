@@ -62,7 +62,7 @@ public partial class MainWindow : Window
         _launchProfiles = _profiles.Where(p => !IsNvidiaProfile(p)).ToList();
         RunnerBox.ItemsSource = _launchProfiles;
         if (RunnersDirectoryList != null)
-            RunnersDirectoryList.ItemsSource = _profiles;
+            RunnersDirectoryList.ItemsSource = _launchProfiles;
         RunnerService.CustomRunnersRoot = _config.CustomRunnersDir;
         RunnerService.CustomCacheRoot = _config.CustomCacheDir;
 
@@ -442,155 +442,280 @@ public partial class MainWindow : Window
 
     private static bool IsNvidiaProfile(RunnerProfile p) => string.Equals(p.Id, "nvidia", StringComparison.OrdinalIgnoreCase);
 
-    private RunnerProfile? NvidiaProfile => _profiles.FirstOrDefault(IsNvidiaProfile);
+    private const string NvidiaRepo = "trustno1-coder/VIctory-NVIDIA";
+    private static readonly System.Net.Http.HttpClient NvidiaHttp = CreateNvidiaHttp();
 
-    private string? NvidiaDir => NvidiaProfile is { } p ? RunnerService.SourceDir(p) : null;
+    private static System.Net.Http.HttpClient CreateNvidiaHttp()
+    {
+        var client = new System.Net.Http.HttpClient { Timeout = TimeSpan.FromMinutes(15) };
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("AmericasLauncher");
+        return client;
+    }
 
-    private bool NvidiaInstalled => NvidiaProfile is { } p && RunnerService.HasSource(p);
+    private string NvidiaExe => string.IsNullOrWhiteSpace(_config.NvidiaFolder) ? "" : Path.Combine(_config.NvidiaFolder, "victory.exe");
+
+    private bool NvidiaInstalled => NvidiaExe != "" && File.Exists(NvidiaExe);
 
     private bool _nvidiaBusy;
+    private bool _nvidiaRunning;
+    private CancellationTokenSource? _nvidiaCts;
+    private Action<string>? _nvidiaSend;
 
     private void UpdateNvidiaState()
     {
         if (NvidiaStatusText == null) return;
         var installed = NvidiaInstalled;
-        var dir = NvidiaDir;
-        NvidiaStatusText.Text = NvidiaProfile == null
-            ? "The Nvidia runner is missing from runners.json."
-            : installed ? $"Installed: {dir}" : "Not installed yet. Click Install first.";
-        NvidiaInstallButton.IsEnabled = !_nvidiaBusy && NvidiaProfile != null;
-        foreach (var b in new[] { NvidiaSetGameButton, NvidiaFsrButton, NvidiaDlssButton, NvidiaCheckButton })
-            b.IsEnabled = installed && !_nvidiaBusy;
-        // The Play buttons need one click on "Set Game folder and exe" first; once done they stay open (even after updates).
-        foreach (var b in new[] { NvidiaFramegenButton, NvidiaPlayButton })
+        if (!_nvidiaBusy)
+            NvidiaStatusText.Text = installed
+                ? $"Installed: {NvidiaExe}" + (string.IsNullOrEmpty(_config.NvidiaTag) ? "" : $" (release {_config.NvidiaTag})")
+                : "Not installed yet. Click Install.";
+        NvidiaInstallButton.IsEnabled = !_nvidiaBusy && !_nvidiaRunning;
+        NvidiaCheckButton.IsEnabled = !_nvidiaBusy && installed;
+        NvidiaFramegenButton.IsEnabled = !_nvidiaBusy && !_nvidiaRunning && installed;
+        NvidiaStopButton.IsEnabled = _nvidiaRunning;
+    }
+
+    /// <summary>Writes to the Nvidia page's own log (never to the launcher log).</summary>
+    private void NvidiaLog(string msg)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
         {
-            b.IsEnabled = installed && !_nvidiaBusy && _config.NvidiaGameSet;
-            b.ToolTip = _config.NvidiaGameSet ? b.ToolTip : "Click \"Set Game folder and exe\" first.";
+            NvidiaLogBox.AppendText(msg + Environment.NewLine);
+            if (NvidiaLogBox.Text.Length > MaxLogChars)
+            {
+                var text = NvidiaLogBox.Text;
+                var cut = text.IndexOf('\n', text.Length - MaxLogChars / 2);
+                NvidiaLogBox.Text = cut >= 0 ? text[(cut + 1)..] : text[^(MaxLogChars / 2)..];
+            }
+            NvidiaLogBox.ScrollToEnd();
+        }));
+    }
+
+    private static async Task<string> GetLatestNvidiaTagAsync()
+    {
+        using var resp = await NvidiaHttp.GetAsync($"https://api.github.com/repos/{NvidiaRepo}/releases/latest");
+        resp.EnsureSuccessStatusCode();
+        using var doc = System.Text.Json.JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+        return doc.RootElement.TryGetProperty("tag_name", out var t) ? t.GetString() ?? "" : "";
+    }
+
+    private async void NvidiaInstall_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            "victory.exe must be downloaded into the folder where your game files and the game's exe are " +
+            "(the folder that contains game_scarlett_master.exe).\n\nNext, choose that folder.",
+            "Nvidia - VIctory Based", MessageBoxButton.OK, MessageBoxImage.Information);
+
+        var dlg = new OpenFolderDialog
+        {
+            Title = "Choose the folder with your game files and exe",
+            InitialDirectory = Directory.Exists(_config.NvidiaFolder) ? _config.NvidiaFolder
+                : Directory.Exists(_config.GameFolder) ? _config.GameFolder : ""
+        };
+        if (dlg.ShowDialog(this) != true || string.IsNullOrWhiteSpace(dlg.FolderName)) return;
+
+        var folder = dlg.FolderName;
+        var target = Path.Combine(folder, "victory.exe");
+        var part = target + ".part";
+        _nvidiaBusy = true;
+        UpdateNvidiaState();
+        NvidiaStatusText.Text = "Downloading victory.exe...";
+        NvidiaLog($"Downloading the newest victory.exe from https://github.com/{NvidiaRepo}/releases/latest ...");
+        try
+        {
+            string tag = "";
+            try { tag = await GetLatestNvidiaTagAsync(); } catch { /* the tag is only informational */ }
+
+            using (var resp = await NvidiaHttp.GetAsync($"https://github.com/{NvidiaRepo}/releases/latest/download/victory.exe",
+                       System.Net.Http.HttpCompletionOption.ResponseHeadersRead))
+            {
+                resp.EnsureSuccessStatusCode();
+                var total = resp.Content.Headers.ContentLength ?? 0;
+                await using var input = await resp.Content.ReadAsStreamAsync();
+                await using var output = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None);
+                var buffer = new byte[81920];
+                long done = 0;
+                var lastShown = DateTime.MinValue;
+                int n;
+                while ((n = await input.ReadAsync(buffer)) > 0)
+                {
+                    await output.WriteAsync(buffer.AsMemory(0, n));
+                    done += n;
+                    if (DateTime.UtcNow - lastShown > TimeSpan.FromMilliseconds(300))
+                    {
+                        lastShown = DateTime.UtcNow;
+                        NvidiaStatusText.Text = total > 0
+                            ? $"Downloading victory.exe... {done * 100 / total}%"
+                            : $"Downloading victory.exe... {done / 1048576} MB";
+                    }
+                }
+            }
+            File.Move(part, target, overwrite: true);
+
+            _config.NvidiaFolder = folder;
+            _config.NvidiaTag = tag;
+            _configService.Save(_config);
+            NvidiaLog($"Downloaded: {target}" + (tag.Length > 0 ? $" (release {tag})" : ""));
+        }
+        catch (Exception ex)
+        {
+            try { if (File.Exists(part)) File.Delete(part); } catch { /* ignore */ }
+            NvidiaLog("Install failed: " + ex.Message);
+            NvidiaStatusText.Text = "Install failed: " + ex.Message;
+        }
+        finally
+        {
+            _nvidiaBusy = false;
+            UpdateNvidiaState();
         }
     }
 
     private async void NvidiaCheck_Click(object sender, RoutedEventArgs e)
     {
-        if (NvidiaProfile is not { } profile) return;
         _nvidiaBusy = true;
         UpdateNvidiaState();
         NvidiaStatusText.Text = "Checking for updates...";
-        var st = await _runners.CheckForUpdateAsync(profile, default, sourceOnly: true);
+        string message;
+        try
+        {
+            var latest = await GetLatestNvidiaTagAsync();
+            if (latest.Length == 0) message = "Could not read the latest release.";
+            else if (string.IsNullOrEmpty(_config.NvidiaTag)) message = $"Latest release: {latest}. The installed version is unknown: click Install to update.";
+            else if (string.Equals(latest, _config.NvidiaTag, StringComparison.OrdinalIgnoreCase)) message = $"Up to date (release {latest}).";
+            else message = $"An update is available ({_config.NvidiaTag} -> {latest}). Click Install to update.";
+        }
+        catch
+        {
+            message = "Could not check (offline?).";
+        }
         _nvidiaBusy = false;
         UpdateNvidiaState();
-        NvidiaStatusText.Text = st switch
-        {
-            UpdateStatus.UpToDate => "Up to date.",
-            UpdateStatus.UpdateAvailable => "An update is available. Click Install to update.",
-            UpdateStatus.NotInstalled => "Not installed yet. Click Install first.",
-            _ => "Could not check (offline or git missing)."
-        };
+        NvidiaStatusText.Text = message;
     }
 
-    private async void NvidiaInstall_Click(object sender, RoutedEventArgs e)
+    private async void NvidiaFramegen_Click(object sender, RoutedEventArgs e)
     {
-        if (NvidiaProfile is not { } profile) return;
-        _nvidiaBusy = true;
+        if (!NvidiaInstalled || _nvidiaRunning) return;
+        var exe = NvidiaExe;
+        var cts = new CancellationTokenSource();
+        _nvidiaCts = cts;
+        _nvidiaRunning = true;
         UpdateNvidiaState();
-        NvidiaStatusText.Text = "Downloading the runner with git...";
+        NvidiaLog($"> {exe}");
         try
         {
-            var ok = await _runners.UpdateSourceAsync(profile, line =>
-            {
-                var text = line.Trim();
-                if (text.Length > 0) Dispatcher.BeginInvoke(new Action(() => NvidiaStatusText.Text = text));
-            }, reviewStep: false);
-            _nvidiaBusy = false;
-            UpdateNvidiaState();
-            if (!ok) NvidiaStatusText.Text = "Install did not finish. Is git installed? Try again.";
+            var code = await ProcessRunner.RunInteractiveAsync(
+                exe, "", Path.GetDirectoryName(exe), NvidiaLog,
+                send => { _nvidiaSend = send; },
+                cts.Token);
+            NvidiaLog($"victory.exe exited with code {code}.");
+        }
+        catch (OperationCanceledException)
+        {
+            NvidiaLog("Stopped.");
         }
         catch (Exception ex)
         {
-            _nvidiaBusy = false;
+            NvidiaLog("ERROR: " + ex.Message);
+        }
+        finally
+        {
+            _nvidiaSend = null;
+            _nvidiaCts = null;
+            cts.Dispose();
+            _nvidiaRunning = false;
             UpdateNvidiaState();
-            NvidiaStatusText.Text = "Install failed: " + ex.Message;
         }
     }
 
-    /// <summary>Opens victory.toml in the runner's folder, creating it from victory.example.toml first if needed.</summary>
-    private void NvidiaSetGame_Click(object sender, RoutedEventArgs e)
+    private void NvidiaStop_Click(object sender, RoutedEventArgs e) => _nvidiaCts?.Cancel();
+
+    private void NvidiaInputBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
     {
-        var dir = NvidiaDir;
-        if (dir == null || !NvidiaInstalled) return;
-        MessageBox.Show(
-            "You do not need to set game_dir = 'C:\\gamefile' literally. Set the location of the folder the game is in (not the exe).\n\n" +
-            "Example: game_dir = 'D:\\Games\\MyGame'",
-            "Set Game folder and exe", MessageBoxButton.OK, MessageBoxImage.Information);
+        if (e.Key != System.Windows.Input.Key.Enter) return;
+        e.Handled = true;
+        SendNvidiaInput();
+    }
+
+    private void NvidiaInputSend_Click(object sender, RoutedEventArgs e) => SendNvidiaInput();
+
+    private void SendNvidiaInput()
+    {
+        var text = NvidiaInputBox.Text;
+        NvidiaInputBox.Clear();
+        NvidiaLog($"> {text}");
+        if (_nvidiaSend != null) _nvidiaSend(text);
+        else NvidiaLog("(victory.exe is not running, so nothing received this.)");
+    }
+
+    // ---- Home: every release note ---------------------------------------------------------------------------------
+
+    private bool _releaseNotesLoaded;
+
+    private void LoadReleaseNotes()
+    {
+        if (_releaseNotesLoaded) return;
+        _releaseNotesLoaded = true;
         try
         {
-            var toml = Path.Combine(dir, "victory.toml");
-            if (!File.Exists(toml))
-            {
-                var example = Path.Combine(dir, "victory.example.toml");
-                if (!File.Exists(example))
+            var asm = typeof(MainWindow).Assembly;
+            var notes = asm.GetManifestResourceNames()
+                .Where(n => n.StartsWith("relnotes/", StringComparison.Ordinal) && n.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+                .Select(n =>
                 {
-                    MessageBox.Show("victory.example.toml was not found in the runner's folder:\n" + dir,
-                        "Nvidia - VIctory Based", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-                File.Copy(example, toml);
-            }
-            Process.Start(new ProcessStartInfo("notepad.exe", $"\"{toml}\"") { UseShellExecute = true });
-            _config.NvidiaGameSet = true;
-            _configService.Save(_config);
-            UpdateNvidiaState();
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message, "Nvidia - VIctory Based", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
+                    var tag = Path.GetFileNameWithoutExtension(n["relnotes/".Length..]);
+                    Version.TryParse(tag.TrimStart('v', 'V'), out var v);
+                    return (Name: n, Tag: tag, Version: v ?? new Version(0, 0));
+                })
+                .OrderByDescending(n => n.Version)
+                .ToList();
 
-    private void NvidiaFsr_Click(object sender, RoutedEventArgs e) => RunNvidiaScript("Get-AMD-FSR.cmd");
-    private void NvidiaDlss_Click(object sender, RoutedEventArgs e) => RunNvidiaScript("Get-NVIDIA-DLSS.cmd");
-    private void NvidiaFramegen_Click(object sender, RoutedEventArgs e) => RunNvidiaScript("PLAY_FRAMEGEN.cmd");
-    private void NvidiaPlay_Click(object sender, RoutedEventArgs e) => RunNvidiaScript("Play-VIctory.cmd");
-
-    /// <summary>Runs one of the runner's own .cmd files in its own command window (its output is not written to the launcher log).</summary>
-    private void RunNvidiaScript(string name)
-    {
-        var dir = NvidiaDir;
-        if (dir == null || !NvidiaInstalled) return;
-        var script = Path.Combine(dir, name);
-        if (!File.Exists(script))
-        {
-            MessageBox.Show($"{name} was not found in the runner's folder. Click Install to update it.\n{dir}",
-                "Nvidia - VIctory Based", MessageBoxButton.OK, MessageBoxImage.Warning);
-            return;
-        }
-
-        try
-        {
-            var psi = new ProcessStartInfo
+            foreach (var note in notes)
             {
-                FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe",
-                Arguments = $"/k \"\"{script}\"\"",   // /k: the window stays open so messages can be read
-                WorkingDirectory = dir,
-                UseShellExecute = false,
-                CreateNoWindow = false
-            };
-            // Play-VIctory.cmd looks for the game in VICTORY_GAME_DIR: use the launcher's Game Folder when it is set.
-            if (name.Equals("Play-VIctory.cmd", StringComparison.OrdinalIgnoreCase) &&
-                Directory.Exists(_config.GameFolder) &&
-                string.IsNullOrEmpty(Environment.GetEnvironmentVariable("VICTORY_GAME_DIR")))
-                psi.Environment["VICTORY_GAME_DIR"] = _config.GameFolder.TrimEnd('\\', '/');
-            Process.Start(psi);
+                using var stream = asm.GetManifestResourceStream(note.Name);
+                if (stream == null) continue;
+                using var reader = new StreamReader(stream);
+                var lines = new List<string>();
+                foreach (var raw in reader.ReadToEnd().Split('\n'))
+                {
+                    var line = raw.TrimEnd('\r');
+                    if (line.StartsWith("Installation:", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("Disclaimer:", StringComparison.OrdinalIgnoreCase) ||
+                        line.StartsWith("What's new", StringComparison.OrdinalIgnoreCase)) continue;
+                    line = line.Replace("**", "").Replace("`", "");
+                    var trimmed = line.TrimStart();
+                    if (trimmed.StartsWith("- "))
+                        line = new string(' ', line.Length - trimmed.Length) + "•  " + trimmed[2..];
+                    lines.Add(line);
+                }
+                var body = string.Join(Environment.NewLine, lines).Trim();
+
+                ReleaseNotesPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = note.Tag,
+                    FontSize = 15,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = (Brush)new BrushConverter().ConvertFromString("#F8FAFC")!,
+                    Margin = new Thickness(0, 10, 0, 4)
+                });
+                ReleaseNotesPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = body,
+                    FontSize = 12.5,
+                    TextWrapping = TextWrapping.Wrap,
+                    Foreground = (Brush)new BrushConverter().ConvertFromString("#CBD5E1")!
+                });
+            }
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show(ex.Message, "Nvidia - VIctory Based", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
+        catch { /* release notes are optional */ }
     }
 
     private async void Nav_Checked(object sender, RoutedEventArgs e)
     {
-        if (LaunchView == null || PortStatusView == null || RunnersView == null || SettingsView == null || NvidiaView == null) return;
+        if (LaunchView == null || PortStatusView == null || RunnersView == null || SettingsView == null || NvidiaView == null || HomeView == null) return;
         FlushLaunchOptionsSave();   // an edit made just before leaving Settings is saved
+        HomeView.Visibility = HomeNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+        if (HomeNavButton.IsChecked == true) LoadReleaseNotes();
         LaunchView.Visibility = LaunchNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         NvidiaView.Visibility = NvidiaNavButton.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
         if (NvidiaNavButton.IsChecked == true) UpdateNvidiaState();
@@ -1326,6 +1451,7 @@ public partial class MainWindow : Window
         _launchCts = null;
         _launchProfile = null;
         _runningProcess = null;
+        SetLogInputSender(null);
         cts.Dispose();
         SetLaunchUi(false);
     }
@@ -1362,7 +1488,7 @@ public partial class MainWindow : Window
     {
         if (!await CanCheckRunnerUpdatesAsync()) return;
 
-        var tasks = _profiles.Select(async p =>
+        var tasks = _launchProfiles.Select(async p =>
         {
             var state = await _runners.CheckHealthAsync(p);
             // Source already updated but not built yet: show it like an update (yellow).
@@ -1577,6 +1703,19 @@ public partial class MainWindow : Window
             }
 
             _runningProcess = process;
+            // The log's input box writes to the game's input.
+            SetLogInputSender(text =>
+            {
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        process.StandardInput.WriteLine(text);
+                        process.StandardInput.Flush();
+                    }
+                }
+                catch { /* the game has exited */ }
+            });
             Log("Started.");
         }
         catch (OperationCanceledException)
@@ -1598,8 +1737,6 @@ public partial class MainWindow : Window
         _sendLogInput = sender;
         Dispatcher.Invoke(() =>
         {
-            if (LogInputPanel != null)
-                LogInputPanel.Visibility = sender != null ? Visibility.Visible : Visibility.Collapsed;
             if (sender != null)
                 LogInputBox?.Focus();
         });
@@ -1618,11 +1755,12 @@ public partial class MainWindow : Window
 
     private void SendCurrentLogInput()
     {
-        if (LogInputBox == null || _sendLogInput == null) return;
+        if (LogInputBox == null) return;
         var text = LogInputBox.Text;
         LogInputBox.Clear();
         Log($"> {text}");
-        _sendLogInput(text);
+        if (_sendLogInput != null) _sendLogInput(text);
+        else Log("(Nothing is running that can receive this.)");
     }
 
 }

@@ -91,7 +91,8 @@ public sealed class LaunchService
             Arguments = "/d /c \"\"%AL_EXE%\" %AL_ARGS% >>\"%AL_LOG%\" 2>&1\"",
             WorkingDirectory = workDir,
             UseShellExecute = false,
-            CreateNoWindow = true
+            CreateNoWindow = true,
+            RedirectStandardInput = true   // the Launch log's input box writes to the game
         };
         LaunchOptionsService.Apply(psi.Environment, env);
         psi.Environment["AL_EXE"] = exe;

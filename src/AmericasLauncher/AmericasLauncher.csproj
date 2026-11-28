@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>AmericasLauncher</AssemblyName>
     <RootNamespace>AmericasLauncher</RootNamespace>
-    <Version>1.8.9</Version>
+    <Version>1.9.0</Version>
     <ApplicationIcon>assets\americas-logo.ico</ApplicationIcon>
   </PropertyGroup>
 
@@ -16,6 +16,8 @@
     <Content Include="Data\runners.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Every release note is shown in Home > Release Notes. -->
+    <EmbeddedResource Include="..\..\release-notes\v*.md" LogicalName="relnotes/%(Filename)%(Extension)" />
     <Resource Include="assets\logo.png" />
     <Resource Include="assets\americas-logo.ico" />
   </ItemGroup>
